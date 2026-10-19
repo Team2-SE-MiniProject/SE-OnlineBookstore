@@ -1,3 +1,4 @@
+
 name: CI
 
 on:
@@ -8,6 +9,29 @@ on:
 jobs:
   checks:
     runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: online_bookstore
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d online_bookstore"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DB_NAME: online_bookstore
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      DB_HOST: localhost
+      DB_PORT: "5432"
+
     steps:
       - uses: actions/checkout@v4
 
@@ -26,11 +50,3 @@ jobs:
       - name: Run tests
         run: python manage.py test
 
-#a few notes on what this does: 
-#this workflow is triggered on push and pull request events to the main branch.
-#lint only fails on real errors (syntax errors, undefined names). 
-#a stricter style check would fail on Django’s auto-generated files, which have unused imports.
-#tests use Django’s built-in runner, so it passes today with 0 tests. 
-#when we add tests, they run automatically. 
-#we can switch to pytest later by adding pytest-django.
-#so far, this workflow is a good start to ensure that our code is syntactically correct and that our tests pass.
