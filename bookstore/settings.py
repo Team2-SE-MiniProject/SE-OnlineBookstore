@@ -132,3 +132,11 @@ MAILERS = {
         'BACKEND': 'django.core.mail.backends.console.EmailBackend',
     },
 }
+
+# --- Security (BOOK-SR-001) ---
+if not DEBUG:
+    SECURE_SSL_REDIRECT = True          # plain HTTP gets redirected to HTTPS
+    SECURE_HSTS_SECONDS = 31536000      # tell browsers to use HTTPS only for 1 year
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
