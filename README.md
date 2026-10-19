@@ -27,6 +27,14 @@ This project is a basic online bookstore system designed to demonstrate software
 - Add books to cart
 - Place orders
 
+## To Run
+```
+py -m venv venv
+venv\Scripts\activate
+pip install -r requirements.txt
+py manage.py runserver
+```
+
 ## Status
 
 This project is being developed as part of a Software Engineering Mini Project.
