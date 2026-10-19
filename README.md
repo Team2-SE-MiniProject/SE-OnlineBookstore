@@ -1,3 +1,5 @@
+![CI](https://github.com/Team2-SE-MiniProject/SE-OnlineBookstore/actions/workflows/ci.yml/badge.svg)
+
 # Online Bookstore
 
 A simple Online Bookstore developed as a Software Engineering Mini Project.
