@@ -8,7 +8,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from .models import Book
-from .serializers import BookListSerializer
+from .serializers import BookDetailSerializer, BookListSerializer
 
 PAGE_SIZE = 20
 
@@ -117,3 +117,21 @@ class BookListView(APIView):
                 "total": paginator.count,
             }
         )
+
+class BookDetailView(APIView):
+    """
+    GET /api/books/<id>/ - full details of one book.
+    SRS 2.2 (Product detail view with ratings and reviews).
+    """
+
+    permission_classes = [AllowAny]  # guests can browse
+
+    def get(self, request, pk):
+        try:
+            book = Book.objects.get(pk=pk)
+        except Book.DoesNotExist:
+            return Response(
+                {"code": "not_found", "message": "Book not found."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+        return Response(BookDetailSerializer(book).data)
