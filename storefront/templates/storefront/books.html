@@ -1,0 +1,57 @@
+{% extends "storefront/base.html" %}
+{% load static %}
+
+{% block title %}Books · Online Bookstore{% endblock %}
+
+{% block content %}
+<h1>Browse books</h1>
+
+<form id="filters" class="filters" role="search">
+  <div class="field grow">
+    <label for="q">Search</label>
+    <input id="q" name="q" type="search" placeholder="Title, author, genre or ISBN">
+  </div>
+
+  <div class="field">
+    <label for="genre">Genre</label>
+    <select id="genre" name="genre">
+      <option value="">All genres</option>
+      <option>Classic</option>
+      <option>Fantasy</option>
+      <option>Fiction</option>
+      <option>Non-fiction</option>
+      <option>Programming</option>
+      <option>Science Fiction</option>
+    </select>
+  </div>
+
+  <div class="field">
+    <label for="min_price">Min price (₹)</label>
+    <input id="min_price" name="min_price" type="number" min="0" step="1" inputmode="numeric">
+  </div>
+
+  <div class="field">
+    <label for="max_price">Max price (₹)</label>
+    <input id="max_price" name="max_price" type="number" min="0" step="1" inputmode="numeric">
+  </div>
+
+  <div class="field">
+    <label for="sort">Sort by</label>
+    <select id="sort" name="sort">
+      <option value="title">Title (A–Z)</option>
+      <option value="price_asc">Price: low to high</option>
+      <option value="price_desc">Price: high to low</option>
+      <option value="newest">Newest first</option>
+      <option value="rating">Highest rated</option>
+    </select>
+  </div>
+</form>
+
+<p id="status" class="status" role="status" aria-live="polite"></p>
+<ul id="book-grid" class="book-grid"></ul>
+<nav id="pager" class="pager" aria-label="Pagination"></nav>
+{% endblock %}
+
+{% block scripts %}
+<script src="{% static 'storefront/books.js' %}"></script>
+{% endblock %}
