@@ -122,3 +122,13 @@ class CartTests(APITestCase):
         )
         self.assertEqual(response.status_code, 404)
         self.assertEqual(self.client.delete(f"{ITEMS_URL}{item.id}/").status_code, 404)
+
+    def test_cart_persists_across_sessions(self):
+        self.add(self.book1, 2)
+        self.client.force_authenticate(None)  # log out
+        fresh_client = type(self.client)()  # a brand-new session
+        fresh_client.force_authenticate(self.user)  # log back in
+        data = fresh_client.get(CART_URL).json()
+        self.assertEqual(len(data["items"]), 1)
+        self.assertEqual(data["items"][0]["quantity"], 2)
+        self.assertEqual(data["subtotal"], "200.00")
