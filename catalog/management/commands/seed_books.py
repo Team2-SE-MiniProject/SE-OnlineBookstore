@@ -56,11 +56,12 @@ class Command(BaseCommand):
             rows.append((f"Sample Book {i}", f"Sample Author {i}", genres[i % 4], str(199 + i)))
 
         created = 0
-        for title, author, genre, price in rows:
-            _, was_created = Book.objects.get_or_create(
+        for n, (title, author, genre, price) in enumerate(rows, start=1):
+            _, was_created = Book.objects.update_or_create(
                 title=title,
                 author=author,
                 defaults={
+                    "isbn": f"978000000{n:06d}",
                     "genre": genre,
                     "price": Decimal(price),
                     "stock": 25,
