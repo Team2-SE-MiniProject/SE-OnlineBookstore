@@ -24,7 +24,7 @@ load_dotenv(BASE_DIR / ".env")
 # See https://docs.djangoproject.com/en/6.1/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-neer(gwo%au&h#r%=nc+sbv=dm*8rsj3%905-l!x+nqgt80n9z'
+SECRET_KEY = os.getenv("SECRET_KEY", "django-insecure-dev-only-key")
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
@@ -159,3 +159,30 @@ if not DEBUG:
     SECURE_HSTS_INCLUDE_SUBDOMAINS = True
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
+    
+#SAD-4.4
+REST_FRAMEWORK = {
+    "EXCEPTION_HANDLER": "bookstore.exceptions.api_exception_handler",
+}
+ 
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "filters": {
+        "redact": {"()": "bookstore.logging_filters.SensitiveDataFilter"},
+    },
+    "formatters": {
+        "standard": {"format": "%(asctime)s %(levelname)s %(name)s: %(message)s"},
+    },
+    "handlers": {
+        "console": {
+            "class": "logging.StreamHandler",
+            "formatter": "standard",
+            "filters": ["redact"],
+        },
+    },
+    "root": {"handlers": ["console"], "level": "INFO"},
+    "loggers": {
+        "django": {"handlers": ["console"], "level": "INFO", "propagate": False},
+    },
+}
