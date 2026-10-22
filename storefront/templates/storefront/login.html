@@ -1,0 +1,29 @@
+{% extends "storefront/base.html" %}
+{% load static %}
+
+{% block title %}Log in · Online Bookstore{% endblock %}
+
+{% block content %}
+<h1>Log in</h1>
+
+<form id="login-form" class="card-form" method="post" action="/accounts/login/" novalidate>
+  {% csrf_token %}
+
+  <div class="field">
+    <label for="username">Username</label>
+    <input id="username" name="username" type="text" autocomplete="username" required>
+  </div>
+
+  <div class="field">
+    <label for="password">Password</label>
+    <input id="password" name="password" type="password" autocomplete="current-password" required>
+  </div>
+
+  <p id="form-error" class="form-error" role="alert"></p>
+  <button type="submit" class="btn">Log in</button>
+</form>
+{% endblock %}
+
+{% block scripts %}
+<script src="{% static 'storefront/login.js' %}"></script>
+{% endblock %}
