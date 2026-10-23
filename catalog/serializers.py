@@ -1,5 +1,7 @@
 from rest_framework import serializers
 
+from reviews.summary import review_summary
+
 from .models import Book
 
 
@@ -32,5 +34,4 @@ class BookDetailSerializer(serializers.ModelSerializer):
         return True
 
     def get_reviews(self, obj):
-        # Placeholder section, filled in Sprint 2 (BOOK-F-060-062)
-        return {"average_rating": None, "count": 0, "items": []}
+        return review_summary(obj)
