@@ -34,3 +34,8 @@ class NotificationTaskTests(TestCase):
             with patch.object(send_registration_email, "delay", side_effect=ConnectionError("broker down")):
                 enqueue_task_safely(send_registration_email, "reader", "reader@example.com", "url")
         log_exception.assert_called_once()
+
+    def test_sample_task_doubles_value(self):
+        from .tasks import sample_task
+        result = sample_task.apply(args=[5])
+        self.assertEqual(result.get(), 10)
