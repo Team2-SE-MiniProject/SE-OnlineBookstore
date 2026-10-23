@@ -5,7 +5,6 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.password_validation import validate_password
 from django.contrib.auth.tokens import PasswordResetTokenGenerator
 from django.core.exceptions import ValidationError
-from django.core.mail import send_mail
 from django.core.validators import validate_email
 from django.db import IntegrityError, transaction
 from django.http import JsonResponse
@@ -15,6 +14,7 @@ from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
 from django.views.decorators.http import require_GET, require_POST
 
 from .models import AuditLog
+from notifications.tasks import enqueue_task_safely, send_registration_email
 
 logger = logging.getLogger(__name__)
 
@@ -57,18 +57,12 @@ def send_verification_email(request, user):
     uid = urlsafe_base64_encode(force_bytes(user.pk))
     token = verification_token.make_token(user)
     link = request.build_absolute_uri(reverse("account-verify", args=[uid, token]))
-    send_mail(
-        subject="Verify your Online Bookstore account",
-        message=(
-            f"Hi {user.username},\n\n"
-            "Thanks for registering. Open this link to verify your email "
-            "and activate your account:\n"
-            f"{link}\n\n"
-            "If you did not register, you can ignore this email."
-        ),
-        from_email=None,
-        recipient_list=[user.email],
-        fail_silently=False,
+    # Queue only after the user transaction commits; a broker outage must not
+    # undo registration or make the request fail.
+    transaction.on_commit(
+        lambda: enqueue_task_safely(
+            send_registration_email, user.username, user.email, link
+        )
     )
 
 
