@@ -7,7 +7,7 @@ from django.core.mail import send_mail
 logger = logging.getLogger(__name__)
 
 
-@shared_task(bind=True, max_retries=3, default_retry_delay=60)
+@shared_task(bind=True, max_retries=3, retry_backoff=True)
 def send_registration_email(self, username, email, verification_link):
     try:
         send_mail(
@@ -28,7 +28,7 @@ def send_registration_email(self, username, email, verification_link):
         raise self.retry(exc=exc)
 
 
-@shared_task(bind=True, max_retries=3, default_retry_delay=60)
+@shared_task(bind=True, max_retries=3, retry_backoff=True)
 def send_order_confirmation_email(self, order_id):
     from orders.models import Order
 
@@ -37,6 +37,7 @@ def send_order_confirmation_email(self, order_id):
         if not order.user.email:
             logger.warning("Order %s has no customer email; confirmation skipped", order_id)
             return
+
         send_mail(
             subject=f"Order confirmation #{order.pk}",
             message=(
@@ -55,10 +56,15 @@ def send_order_confirmation_email(self, order_id):
         raise self.retry(exc=exc)
 
 
+@shared_task(bind=True, max_retries=3, retry_backoff=True)
+def sample_task(self, value):
+    """Sample task to verify Celery task execution."""
+    return value * 2
+
+
 def enqueue_task_safely(task, *args):
     """Queue work without allowing a broker outage to fail the user's request."""
     try:
         task.delay(*args)
     except Exception:
         logger.exception("Could not enqueue notification task %s", task.name)
-
