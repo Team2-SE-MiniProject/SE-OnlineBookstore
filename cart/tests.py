@@ -1,3 +1,7 @@
-from django.test import TestCase
+from django.test import SimpleTestCase
 
-# Create your tests here.
+
+class CartModuleTest(SimpleTestCase):
+    def test_cart_module_is_available(self):
+        import cart
+        self.assertIsNotNone(cart)
