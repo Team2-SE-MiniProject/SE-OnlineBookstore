@@ -6,3 +6,5 @@ tzdata==2026.5
 
 psycopg[binary]
 python-dotenv
+
+celery[redis]>=5.4,<6
