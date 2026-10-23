@@ -4,7 +4,7 @@ from urllib.parse import urlparse
 
 from django.contrib.auth import get_user_model
 from django.core import mail
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.utils.encoding import force_bytes
 from django.utils.http import urlsafe_base64_encode
 
@@ -17,11 +17,13 @@ LOGIN_URL = "/accounts/login/"
 PASSWORD = "StrongTestPass123!"
 
 
+@override_settings(CELERY_TASK_ALWAYS_EAGER=True, CELERY_TASK_EAGER_PROPAGATES=False)
 class RegistrationTests(TestCase):
     payload = {"username": "newbie", "email": "newbie@example.com", "password": PASSWORD}
 
     def register(self, **overrides):
-        return self.client.post(REGISTER_URL, {**self.payload, **overrides})
+        with self.captureOnCommitCallbacks(execute=True):
+            return self.client.post(REGISTER_URL, {**self.payload, **overrides})
 
     def link_path(self):
         link = re.search(r"https?://\S+", mail.outbox[-1].body).group(0)
@@ -83,12 +85,11 @@ class RegistrationTests(TestCase):
         self.assertEqual(response.json()["code"], "weak_password")
         self.assertEqual(User.objects.count(), 0)
 
-    def test_email_failure_rolls_back_registration(self):
-        with patch("accounts.registration.send_mail", side_effect=OSError("smtp down")):
+    def test_email_failure_does_not_break_registration(self):
+        with patch("notifications.tasks.send_mail", side_effect=OSError("smtp down")):
             response = self.register()
-        self.assertEqual(response.status_code, 503)
-        self.assertEqual(response.json()["code"], "email_failed")
-        self.assertEqual(User.objects.count(), 0)
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(User.objects.count(), 1)
 
     # --- duplicates ---
 
