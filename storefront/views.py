@@ -1,14 +1,13 @@
 from django.contrib.auth import logout
-from django.contrib.auth.views import redirect_to_login
+from django.contrib.auth.mixins import LoginRequiredMixin
 from django.shortcuts import redirect
-from django.urls import reverse
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import ensure_csrf_cookie
 from django.views.decorators.http import require_POST
 from django.views.generic import TemplateView
 
 # ensure_csrf_cookie makes sure the browser has a CSRF cookie, which the page's
-# JavaScript sends back as a header when it calls the cart API.
+# JavaScript sends back as a header when it calls the APIs.
 
 
 @method_decorator(ensure_csrf_cookie, name="dispatch")
@@ -25,18 +24,21 @@ class LoginPageView(TemplateView):
     template_name = "storefront/login.html"
 
 
-@method_decorator(ensure_csrf_cookie, name="dispatch")
-class CartPageView(TemplateView):
-    """The logged-in user's cart. Anonymous visitors are sent to the login page."""
+class StorefrontLoginRequired(LoginRequiredMixin):
+    """Anonymous visitors are sent to our login page, then back to where they were."""
 
+    login_url = "storefront:login"
+    redirect_field_name = "next"
+
+
+@method_decorator(ensure_csrf_cookie, name="dispatch")
+class CartPageView(StorefrontLoginRequired, TemplateView):
     template_name = "storefront/cart.html"
 
-    def dispatch(self, request, *args, **kwargs):
-        if not request.user.is_authenticated:
-            return redirect_to_login(
-                request.get_full_path(), login_url=reverse("storefront:login")
-            )
-        return super().dispatch(request, *args, **kwargs)
+
+@method_decorator(ensure_csrf_cookie, name="dispatch")
+class CheckoutPageView(StorefrontLoginRequired, TemplateView):
+    template_name = "storefront/checkout.html"
 
 
 @require_POST
