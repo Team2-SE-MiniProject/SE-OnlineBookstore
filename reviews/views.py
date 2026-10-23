@@ -77,7 +77,7 @@ class ReviewListView(APIView):
         except ValueError:
             return error("invalid_page", "page must be a positive integer.")
 
-        reviews = book.reviews.select_related("user").order_by("-created_at", "-id")
+        reviews = book.reviews.filter(is_approved=True).select_related("user").order_by("-created_at", "-id")
         paginator = Paginator(reviews, PAGE_SIZE)
         try:
             page_reviews = list(paginator.page(page).object_list)
