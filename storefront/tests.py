@@ -15,10 +15,21 @@ class StorefrontPageTests(TestCase):
         self.assertContains(response, "Online Bookstore")
         self.assertContains(response, 'id="book-grid"')
 
-    def test_login_page_loads(self):
+    def test_login_page_loads_and_links_to_register(self):
         response = self.client.get("/login/")
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'id="login-form"')
+        self.assertContains(response, 'href="/register/"')
+
+    def test_register_page_loads(self):
+        response = self.client.get("/register/")
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'id="register-form"')
+
+    def test_nav_shows_register_to_visitors_only(self):
+        self.assertContains(self.client.get("/"), 'href="/register/"')
+        self.client.force_login(self.make_user())
+        self.assertNotContains(self.client.get("/"), 'href="/register/"')
 
     def test_cart_page_redirects_anonymous_users_to_login(self):
         response = self.client.get("/cart/")

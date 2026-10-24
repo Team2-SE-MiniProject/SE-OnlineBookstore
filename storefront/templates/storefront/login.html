@@ -21,6 +21,9 @@
 
   <p id="form-error" class="form-error" role="alert"></p>
   <button type="submit" class="btn">Log in</button>
+
+  <p class="form-note">New here? <a href="{% url 'storefront:register' %}">Create an account</a></p>
+  <p class="form-note">Just registered and can't log in? Click the link in your verification email first.</p>
 </form>
 {% endblock %}
 

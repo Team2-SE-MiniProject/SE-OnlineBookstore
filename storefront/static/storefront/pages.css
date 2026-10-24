@@ -69,3 +69,5 @@ a.btn { display: inline-block; text-decoration: none; }
 .address-form { margin-top: 1rem; max-width: 620px; }
 .address-form .row { display: flex; gap: 0.8rem; flex-wrap: wrap; }
 .address-form .row .field { flex: 1 1 160px; }
+
+.hint, .form-note { margin: 0; color: var(--muted); font-size: 0.9rem; }

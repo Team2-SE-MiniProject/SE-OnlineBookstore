@@ -24,6 +24,13 @@ class LoginPageView(TemplateView):
     template_name = "storefront/login.html"
 
 
+@method_decorator(ensure_csrf_cookie, name="dispatch")
+class RegisterPageView(TemplateView):
+    """Sign-up form. It posts to the existing /accounts/register/ endpoint."""
+
+    template_name = "storefront/register.html"
+
+
 class StorefrontLoginRequired(LoginRequiredMixin):
     """Anonymous visitors are sent to our login page, then back to where they were."""
 
