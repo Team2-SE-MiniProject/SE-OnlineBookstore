@@ -1,0 +1,47 @@
+{% extends "storefront/base.html" %}
+{% load static %}
+
+{% block title %}Register · Online Bookstore{% endblock %}
+
+{% block content %}
+<h1>Create an account</h1>
+
+<form id="register-form" class="card-form" novalidate>
+  <div class="field">
+    <label for="username">Username</label>
+    <input id="username" name="username" type="text" autocomplete="username" required>
+  </div>
+
+  <div class="field">
+    <label for="email">Email</label>
+    <input id="email" name="email" type="email" autocomplete="email" required>
+  </div>
+
+  <div class="field">
+    <label for="password">Password</label>
+    <input id="password" name="password" type="password" autocomplete="new-password"
+           aria-describedby="password-help" required>
+    <p id="password-help" class="hint">At least 8 characters. Avoid common passwords and all-number passwords.</p>
+  </div>
+
+  <div class="field">
+    <label for="password2">Confirm password</label>
+    <input id="password2" name="password2" type="password" autocomplete="new-password" required>
+  </div>
+
+  <p id="form-error" class="form-error" role="alert"></p>
+  <button type="submit" class="btn">Create account</button>
+
+  <p class="form-note">Already registered? <a href="{% url 'storefront:login' %}">Log in</a></p>
+</form>
+
+<section id="register-done" class="panel" tabindex="-1" hidden>
+  <h2>Almost there!</h2>
+  <p id="done-message"></p>
+  <p>Click the link in that email to activate your account, then <a href="{% url 'storefront:login' %}">log in</a>.</p>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script src="{% static 'storefront/register.js' %}"></script>
+{% endblock %}

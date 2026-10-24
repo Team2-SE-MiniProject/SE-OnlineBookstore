@@ -23,6 +23,7 @@
           </form>
         {% else %}
           <a href="{% url 'storefront:login' %}">Log in</a>
+          <a href="{% url 'storefront:register' %}">Register</a>
         {% endif %}
         {% block nav_extra %}{% endblock %}
       </nav>
