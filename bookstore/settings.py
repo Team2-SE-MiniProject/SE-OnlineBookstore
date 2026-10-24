@@ -13,6 +13,8 @@ https://docs.djangoproject.com/en/6.1/ref/settings/
 import os
 from pathlib import Path
 from dotenv import load_dotenv
+import sys
+from datetime import timedelta
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -148,11 +150,16 @@ STATIC_URL = 'static/'
 # Email
 # https://docs.djangoproject.com/en/6.1/topics/email/#topic-email-configuration
 
-MAILERS = {
-    'default': {
-        'BACKEND': 'django.core.mail.backends.console.EmailBackend',
-    },
-}
+EMAIL_BACKEND = os.getenv(
+    "EMAIL_BACKEND",
+    "django.core.mail.backends.console.EmailBackend",
+)
+DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", "no-reply@onlinebookstore.local")
+
+# Celery uses Redis as the broker. The console email backend is used in development.
+CELERY_BROKER_URL = os.getenv("CELERY_BROKER_URL", "redis://localhost:6379/0")
+CELERY_RESULT_BACKEND = os.getenv("CELERY_RESULT_BACKEND", "redis://localhost:6379/1")
+CELERY_TASK_IGNORE_RESULT = True
 
 # --- Security (BOOK-SR-001) ---
 if not DEBUG:
@@ -162,9 +169,14 @@ if not DEBUG:
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
     
-#SAD-4.4
+#SAD-4.4 and #33
 REST_FRAMEWORK = {
     "EXCEPTION_HANDLER": "bookstore.exceptions.api_exception_handler",
+    "DEFAULT_AUTHENTICATION_CLASSES": [
+        "rest_framework.authentication.SessionAuthentication",
+        "accounts.authentication.JWTAuthentication",
+        "rest_framework.authentication.BasicAuthentication",
+    ],
 }
  
 LOGGING = {
@@ -188,3 +200,20 @@ LOGGING = {
         "django": {"handlers": ["console"], "level": "INFO", "propagate": False},
     },
 }
+
+# 1) bcrypt for new passwords (BOOK-SR-002). The PBKDF2 entries stay so that
+#    existing accounts (like your demo user) can still log in; their hash is
+#    upgraded to bcrypt the next time they log in successfully.
+PASSWORD_HASHERS = [
+    "django.contrib.auth.hashers.BCryptSHA256PasswordHasher",
+    "django.contrib.auth.hashers.PBKDF2PasswordHasher",
+    "django.contrib.auth.hashers.PBKDF2SHA1PasswordHasher",
+]
+ 
+# Optional but recommended: bcrypt is deliberately slow, so use a fast hasher
+# when running the tests, otherwise every test that creates a user gets slower.
+if "test" in sys.argv:
+    PASSWORD_HASHERS = ["django.contrib.auth.hashers.MD5PasswordHasher"]
+ 
+# 2) How long a JWT stays valid.
+JWT_ACCESS_LIFETIME = timedelta(hours=1)

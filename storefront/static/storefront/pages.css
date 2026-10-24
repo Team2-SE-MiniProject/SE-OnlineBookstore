@@ -1,0 +1,73 @@
+/* Makes the HTML "hidden" attribute win over display rules set below. */
+[hidden] { display: none !important; }
+
+/* ---- nav ---- */
+.logout-form { display: inline; }
+.link-button {
+  background: none; border: 0; padding: 0; margin-left: 1.2rem;
+  color: #fff; font: inherit; text-decoration: underline; cursor: pointer;
+}
+
+/* ---- buttons that are links ---- */
+a.btn { display: inline-block; text-decoration: none; }
+.btn-large { font-size: 1.1rem; padding: 0.75rem 1.4rem; }
+
+/* ---- forms ---- */
+.card-form {
+  max-width: 380px; display: flex; flex-direction: column; gap: 1rem;
+  background: var(--card); border: 1px solid var(--line);
+  border-radius: 10px; padding: 1.2rem;
+}
+.form-error { color: #b91c1c; min-height: 1.4em; margin: 0; }
+
+/* ---- toast message ---- */
+.toast {
+  position: fixed; left: 50%; bottom: 1.5rem; transform: translateX(-50%);
+  background: var(--ink); color: #fff; padding: 0.7rem 1.1rem; border-radius: 8px;
+  opacity: 0; pointer-events: none; transition: opacity 0.2s; z-index: 20;
+}
+.toast.show { opacity: 1; }
+
+/* ---- cart ---- */
+.cart-items { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.8rem; }
+.cart-row {
+  display: grid; grid-template-columns: 72px 1fr auto auto; gap: 1rem; align-items: center;
+  background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 0.8rem;
+}
+.cart-cover { width: 72px; aspect-ratio: 2 / 3; background: #e7e4dc; border-radius: 6px; overflow: hidden; }
+.cart-cover img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.cart-info h2 { font-size: 1rem; margin: 0; }
+.cart-info p { margin: 0.1rem 0; }
+.cart-controls { display: flex; flex-direction: column; gap: 0.4rem; align-items: flex-start; }
+.cart-controls input { width: 5rem; }
+.line-total { font-weight: 700; margin: 0; }
+.cart-summary { margin-top: 1.2rem; text-align: right; font-size: 1.1rem; }
+
+@media (max-width: 640px) {
+  .cart-row { grid-template-columns: 72px 1fr; }
+  .cart-controls, .line-total { grid-column: 2; }
+}
+
+/* ---- checkout ---- */
+.panel {
+  background: var(--card); border: 1px solid var(--line); border-radius: 10px;
+  padding: 1rem 1.2rem; margin-bottom: 1rem;
+}
+.panel h2 { margin-top: 0; font-size: 1.15rem; }
+.summary-items { list-style: none; margin: 0 0 0.6rem; padding: 0; }
+.summary-items li {
+  display: flex; justify-content: space-between; gap: 1rem;
+  padding: 0.35rem 0; border-bottom: 1px solid var(--line);
+}
+.summary-total { text-align: right; margin: 0; font-size: 1.05rem; }
+.address-list { display: flex; flex-direction: column; gap: 0.6rem; margin-bottom: 0.8rem; }
+.address-option {
+  display: flex; gap: 0.6rem; align-items: flex-start; padding: 0.7rem;
+  border: 1px solid var(--line); border-radius: 8px; background: #fff;
+  font-size: 1rem; font-weight: 400; color: var(--ink); cursor: pointer;
+}
+.address-form { margin-top: 1rem; max-width: 620px; }
+.address-form .row { display: flex; gap: 0.8rem; flex-wrap: wrap; }
+.address-form .row .field { flex: 1 1 160px; }
+
+.hint, .form-note { margin: 0; color: var(--muted); font-size: 0.9rem; }

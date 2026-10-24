@@ -1,0 +1,20 @@
+{% extends "storefront/base.html" %}
+{% load static %}
+
+{% block title %}Your cart · Online Bookstore{% endblock %}
+
+{% block content %}
+<h1>Your cart</h1>
+
+<p id="cart-status" class="status" role="status" aria-live="polite">Loading your cart…</p>
+<ul id="cart-items" class="cart-items"></ul>
+
+<section id="cart-summary" class="cart-summary" hidden>
+  <p>Subtotal (<span id="cart-count">0</span> items): <strong id="cart-subtotal">₹0.00</strong></p>
+  <a class="btn btn-large" href="{% url 'storefront:checkout' %}">Proceed to checkout</a>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script src="{% static 'storefront/cart.js' %}"></script>
+{% endblock %}

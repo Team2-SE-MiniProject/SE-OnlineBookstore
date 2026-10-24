@@ -1,0 +1,90 @@
+{% extends "storefront/base.html" %}
+{% load static %}
+
+{% block title %}Checkout · Online Bookstore{% endblock %}
+
+{% block content %}
+<h1>Checkout</h1>
+
+<p id="checkout-status" class="status" role="status" aria-live="polite">Loading…</p>
+
+<div id="checkout-main" hidden>
+  <section class="panel" aria-labelledby="summary-heading">
+    <h2 id="summary-heading">Order summary</h2>
+    <ul id="summary-items" class="summary-items"></ul>
+    <p class="summary-total">Subtotal: <strong id="summary-subtotal"></strong></p>
+  </section>
+
+  <section class="panel" aria-labelledby="address-heading">
+    <h2 id="address-heading">Delivery address</h2>
+    <div id="address-list" class="address-list" role="radiogroup" aria-labelledby="address-heading"></div>
+    <button type="button" id="toggle-address" class="btn btn-secondary">Add a new address</button>
+
+    <form id="address-form" class="card-form address-form" hidden novalidate>
+      <div class="field">
+        <label for="recipient_name">Full name</label>
+        <input id="recipient_name" name="recipient_name" type="text" autocomplete="name" required>
+      </div>
+      <div class="field">
+        <label for="line1">Address line 1</label>
+        <input id="line1" name="line1" type="text" autocomplete="address-line1" required>
+      </div>
+      <div class="field">
+        <label for="line2">Address line 2 (optional)</label>
+        <input id="line2" name="line2" type="text" autocomplete="address-line2">
+      </div>
+      <div class="row">
+        <div class="field">
+          <label for="city">City</label>
+          <input id="city" name="city" type="text" autocomplete="address-level2" required>
+        </div>
+        <div class="field">
+          <label for="state">State</label>
+          <input id="state" name="state" type="text" autocomplete="address-level1" required>
+        </div>
+      </div>
+      <div class="row">
+        <div class="field">
+          <label for="postal_code">PIN code</label>
+          <input id="postal_code" name="postal_code" type="text" inputmode="numeric" autocomplete="postal-code" required>
+        </div>
+        <div class="field">
+          <label for="country">Country</label>
+          <input id="country" name="country" type="text" value="India" autocomplete="country-name">
+        </div>
+        <div class="field">
+          <label for="phone">Phone (optional)</label>
+          <input id="phone" name="phone" type="tel" autocomplete="tel">
+        </div>
+      </div>
+      <p id="address-error" class="form-error" role="alert"></p>
+      <button type="submit" class="btn">Save address</button>
+    </form>
+  </section>
+
+  <section class="panel" aria-labelledby="coupon-heading">
+    <h2 id="coupon-heading">Coupon</h2>
+    <div class="field">
+      <label for="coupon">Coupon code (optional)</label>
+      <input id="coupon" name="coupon" type="text" autocomplete="off">
+    </div>
+  </section>
+
+  <p id="order-error" class="form-error" role="alert"></p>
+  <button type="button" id="place-order" class="btn btn-large">Place order</button>
+</div>
+
+<section id="confirmation" class="panel" tabindex="-1" hidden>
+  <h2>Thank you, your order is placed!</h2>
+  <p>Order number: <strong id="conf-id"></strong></p>
+  <p>Status: <strong id="conf-status"></strong></p>
+  <p>Total: <strong id="conf-total"></strong></p>
+  <p id="conf-coupon" hidden></p>
+  <p>Payment is still pending. Online payment gets connected in the next sprint.</p>
+  <a class="btn" href="{% url 'storefront:books' %}">Continue shopping</a>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script src="{% static 'storefront/checkout.js' %}"></script>
+{% endblock %}
