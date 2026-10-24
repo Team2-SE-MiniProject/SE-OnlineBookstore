@@ -1,4 +1,3 @@
-
 from datetime import timedelta
 
 from django.contrib.auth import authenticate, get_user_model, login
@@ -12,28 +11,27 @@ from .models import AccountLockout, AuditLog
 MAX_FAILED_ATTEMPTS = 5
 LOCKOUT_DURATION = timedelta(minutes=15)
 
+# Outcomes of authenticate_with_lockout()
+OK, INVALID, LOCKED = "ok", "invalid", "locked"
 
-@require_POST
-def login_view(request):
-    username = request.POST.get("username", "").strip()
-    password = request.POST.get("password", "")
 
-    if not username or not password:
-        return JsonResponse(
-            {"error": "Username and password are required."},
-            status=400,
-        )
+def authenticate_with_lockout(request, username, password):
+    """
+    Check a username and password and apply the lockout rule (BOOK-F-003):
+    5 consecutive failures lock the account for 15 minutes.
 
+    Shared by the session login (/accounts/login/) and the JWT login
+    (/api/auth/login), so both follow exactly the same rules.
+
+    Returns (OK, user), (INVALID, None) or (LOCKED, locked_until).
+    """
     User = get_user_model()
     user = User.objects.filter(username=username).first()
 
     # Authenticate even for unknown usernames to reduce timing differences.
     if user is None:
         authenticate(request, username=username, password=password)
-        return JsonResponse(
-            {"error": "Invalid username or password."},
-            status=401,
-        )
+        return INVALID, None
 
     with transaction.atomic():
         lockout, _ = AccountLockout.objects.get_or_create(user=user)
@@ -42,13 +40,7 @@ def login_view(request):
         now = timezone.now()
 
         if lockout.locked_until and lockout.locked_until > now:
-            return JsonResponse(
-                {
-                    "error": "Account is locked. Try again after 15 minutes.",
-                    "locked_until": lockout.locked_until.isoformat(),
-                },
-                status=423,
-            )
+            return LOCKED, lockout.locked_until
 
         # Clear an expired lock before checking the new attempt.
         if lockout.locked_until and lockout.locked_until <= now:
@@ -76,15 +68,42 @@ def login_view(request):
                 )
 
             lockout.save()
-            return JsonResponse(
-                {"error": "Invalid username or password."},
-                status=401,
-            )
+            return INVALID, None
 
         lockout.failed_attempts = 0
         lockout.locked_until = None
         lockout.save()
+        return OK, authenticated_user
 
-        login(request, authenticated_user)
 
+@require_POST
+def login_view(request):
+    """Session login used by the storefront pages."""
+    username = request.POST.get("username", "").strip()
+    password = request.POST.get("password", "")
+
+    if not username or not password:
+        return JsonResponse(
+            {"error": "Username and password are required."},
+            status=400,
+        )
+
+    outcome, result = authenticate_with_lockout(request, username, password)
+
+    if outcome == LOCKED:
+        return JsonResponse(
+            {
+                "error": "Account is locked. Try again after 15 minutes.",
+                "locked_until": result.isoformat(),
+            },
+            status=423,
+        )
+
+    if outcome == INVALID:
+        return JsonResponse(
+            {"error": "Invalid username or password."},
+            status=401,
+        )
+
+    login(request, result)
     return JsonResponse({"message": "Login successful."}, status=200)
