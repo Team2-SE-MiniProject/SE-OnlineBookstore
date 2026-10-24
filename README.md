@@ -17,9 +17,10 @@ This project is a basic online bookstore system designed to demonstrate software
 
 ## Project Documents
 
-- [Software Requirements Specification (SRS)](./2_SRS_MiniProject.pdf)
-- [Software Architecture/Design Document (SAD)](./2_SAD_MiniProject.pdf)
-- [Test Plan](./2_TestPlan_MiniProject.pdf)
+- [Software Requirements Specification (SRS)](docs/2_SRS_MiniProject.pdf)
+- [Software Architecture/Design Document (SAD)](docs/2_SAD_MiniProject.pdf)
+- [Test Plan](docs/2_TestPlan_MiniProject.pdf)
+- [Deviations from the documents](docs/DEVIATIONS.md)
 
 ## Features
 
