@@ -4,6 +4,8 @@ from celery import shared_task
 from django.conf import settings
 from django.core.mail import send_mail
 
+from .sms import send_sms
+
 logger = logging.getLogger(__name__)
 
 
@@ -53,6 +55,28 @@ def send_order_confirmation_email(self, order_id):
         )
     except Exception as exc:
         logger.exception("Order confirmation email failed for order %s", order_id)
+        raise self.retry(exc=exc)
+
+
+@shared_task(bind=True, max_retries=3, retry_backoff=True)
+def send_order_confirmation_sms(self, order_id):
+    """Text the phone number on the order's delivery address (SRS 2.2)."""
+    from orders.models import Order
+
+    try:
+        order = Order.objects.select_related("delivery_address").get(pk=order_id)
+        phone = order.delivery_address.phone if order.delivery_address else ""
+        if not phone:
+            logger.warning("Order %s has no phone number; SMS skipped", order_id)
+            return
+
+        send_sms(
+            phone,
+            f"Online Bookstore: order #{order.pk} placed. "
+            f"Total {order.total_amount}. Status: {order.status}.",
+        )
+    except Exception as exc:
+        logger.exception("Order confirmation SMS failed for order %s", order_id)
         raise self.retry(exc=exc)
 
 
