@@ -12,7 +12,10 @@ def serialize_review(review):
 
 
 def rating_stats(book):
-    stats = book.reviews.aggregate(avg=Avg("rating"), count=Count("id"))
+    """Average and count over approved reviews only."""
+    stats = book.reviews.filter(is_approved=True).aggregate(
+        avg=Avg("rating"), count=Count("id")
+    )
     avg = stats["avg"]
     average = round(float(avg), 1) if avg is not None else None
     return average, stats["count"]
@@ -21,7 +24,11 @@ def rating_stats(book):
 def review_summary(book, limit=5):
     """Used by the book detail page."""
     average, count = rating_stats(book)
-    latest = book.reviews.select_related("user").order_by("-created_at", "-id")[:limit]
+    latest = (
+        book.reviews.filter(is_approved=True)
+        .select_related("user")
+        .order_by("-created_at", "-id")[:limit]
+    )
     return {
         "average_rating": average,
         "count": count,
