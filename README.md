@@ -21,6 +21,7 @@ This project is a basic online bookstore system designed to demonstrate software
 - [Software Architecture/Design Document (SAD)](docs/2_SAD_MiniProject.pdf)
 - [Test Plan](docs/2_TestPlan_MiniProject.pdf)
 - [Deviations from the documents](docs/DEVIATIONS.md)
+- [Setup and run guide](./docs/SETUP.md)
 
 ## Features
 
