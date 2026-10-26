@@ -14,7 +14,11 @@ from rest_framework.response import Response
 
 from accounts.models import Address
 from cart.models import Cart
-from notifications.tasks import enqueue_task_safely, send_order_confirmation_email
+from notifications.tasks import (
+    enqueue_task_safely,
+    send_order_confirmation_email,
+    send_order_confirmation_sms,
+)
 from catalog.models import Book
 from .models import Coupon, Order, OrderItem
 
@@ -142,6 +146,13 @@ def checkout(request):
                 send_order_confirmation_email, order_id
             )
         )
+        
+        transaction.on_commit(
+            lambda order_id=order.pk: enqueue_task_safely(
+                send_order_confirmation_sms, order_id
+            )
+        )
+        
         for item in cart_items:
             book = locked_books[item.book_id]
             OrderItem.objects.create(
