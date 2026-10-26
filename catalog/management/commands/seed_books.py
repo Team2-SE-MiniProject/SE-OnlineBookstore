@@ -40,8 +40,51 @@ BOOKS = [
     ("Gone Girl", "Gillian Flynn", "Thriller", "349.00"),
     ("The Help", "Kathryn Stockett", "Fiction", "279.00"),
     ("The Kite Runner", "Khaled Hosseini", "Fiction", "299.00"),
-    ("Life of Pi", "Yann Martel", "Fiction", "279.00")
+    ("Life of Pi", "Yann Martel", "Fiction", "279.00"),
 ]
+
+# Real ISBN-13 numbers, so the book list can show real covers from Open Library.
+# The key must match the title in BOOKS exactly. A book with no entry here keeps a
+# placeholder cover and a made-up ISBN. If a cover looks wrong or is missing, check the
+# ISBN on openlibrary.org (search the title, open an edition) or delete that line.
+REAL_ISBNS = {
+    "Pride and Prejudice": "9780141439518",
+    "1984": "9780451524935",
+    "The Hobbit": "9780547928227",
+    "To Kill a Mockingbird": "9780060935467",
+    "Dune": "9780441013593",
+    "Sapiens": "9780062316097",
+    "Clean Code": "9780132350884",
+    "The Pragmatic Programmer": "9780135957059",
+    "The Alchemist": "9780062315007",
+    "Wings of Fire": "9788173711466",
+    "The Great Gatsby": "9780743273565",
+    "The Catcher in the Rye": "9780316769488",
+    "Brave New World": "9780060850524",
+    "The Lord of the Rings": "9780618640157",
+    "The Lean Startup": "9780307887894",
+    "Thinking, Fast and Slow": "9780374533557",
+    "The Road to Reality": "9780679776314",
+    "The Selfish Gene": "9780198788607",
+    "Guns, Germs, and Steel": "9780393317558",
+    "Harry Potter and the Sorcerer's Stone": "9780590353427",
+    "The Da Vinci Code": "9780307474278",
+    "The Girl with the Dragon Tattoo": "9780307454546",
+    "The Hunger Games": "9780439023528",
+    "The Fault in Our Stars": "9780142424179",
+    "The Shining": "9780307743657",
+    "The Silence of the Lambs": "9780312924584",
+    "The Martian": "9780553418026",
+    "The Girl on the Train": "9781594634024",
+    "Gone Girl": "9780307588371",
+    "The Help": "9780425232200",
+    "The Kite Runner": "9781594631931",
+    "Life of Pi": "9780156027328",
+}
+
+# default=false makes Open Library answer 404 when it has no cover. The page then hides
+# the broken image and shows the grey box instead of a 1-pixel placeholder.
+COVER_URL = "https://covers.openlibrary.org/b/isbn/{isbn}-M.jpg?default=false"
 
 TOTAL = 25  # more than one page (20 per page) so pagination is visible in the demo
 
@@ -51,22 +94,27 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         rows = list(BOOKS)
-        genres = ["Fiction", "Non-fiction", "Fantasy", "Science Fiction"]
+        genres = ["Fiction", "Non-fiction", "Fantasy", "Science Fiction", "Business", "Classic", "History", "Horror", "Programming", "Science", "Thriller"]
         for i in range(len(BOOKS) + 1, TOTAL + 1):
             rows.append((f"Sample Book {i}", f"Sample Author {i}", genres[i % 4], str(199 + i)))
 
         created = 0
         for n, (title, author, genre, price) in enumerate(rows, start=1):
+            isbn = REAL_ISBNS.get(title)
             _, was_created = Book.objects.update_or_create(
                 title=title,
                 author=author,
                 defaults={
-                    "isbn": f"978000000{n:06d}",
+                    "isbn": isbn or f"9780000{n:06d}",
                     "genre": genre,
                     "price": Decimal(price),
                     "stock": 25,
                     "description": f"Sample description for {title}.",
-                    "cover": f"https://placehold.co/200x300?text={quote_plus(title)}",
+                    "cover": (
+                        COVER_URL.format(isbn=isbn)
+                        if isbn
+                        else f"https://placehold.co/200x300?text={quote_plus(title)}"
+                    ),
                 },
             )
             created += was_created
