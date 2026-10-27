@@ -52,6 +52,7 @@ INSTALLED_APPS = [
     'notifications',
     'wishlist',
     'storefront',
+    'seller',
 ]
 
 MIDDLEWARE = [

@@ -1,0 +1,25 @@
+{% extends "seller/layout.html" %}
+
+{% block title %}Delete book · Online Bookstore{% endblock %}
+
+{% block seller_content %}
+<h1>Delete this book?</h1>
+<p><strong>{{ object.title }}</strong> by {{ object.author }}</p>
+
+{% if has_orders %}
+<p role="alert" class="notice">This book has been ordered, so it cannot be deleted. Edit it and set the stock to 0 to stop selling it.</p>
+<div class="actions">
+  <a class="button" href="{% url 'seller:book-edit' object.pk %}">Edit this book</a>
+  <a class="button secondary" href="{% url 'seller:dashboard' %}">Back to dashboard</a>
+</div>
+{% else %}
+<p>This removes the listing for good. This cannot be undone.</p>
+<form method="post">
+  {% csrf_token %}
+  <div class="actions">
+    <button type="submit" class="danger">Yes, delete this book</button>
+    <a class="button secondary" href="{% url 'seller:dashboard' %}">Cancel</a>
+  </div>
+</form>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,103 @@
+{% extends "seller/layout.html" %}
+
+{% block title %}Sales analytics · Online Bookstore{% endblock %}
+
+{% block seller_content %}
+<h1>Sales analytics</h1>
+
+<div class="controls">
+  <form method="get" class="inline-form">
+    <div class="field">
+      <label for="months">Time range</label>
+      <select id="months" name="months">
+        {% for r in ranges %}<option value="{{ r }}"{% if r == months %} selected{% endif %}>Last {{ r }} months</option>{% endfor %}
+      </select>
+    </div>
+    <button type="submit">Show</button>
+  </form>
+  <a class="button secondary" href="{% url 'seller:analytics-export' %}?months={{ months }}">Download CSV</a>
+</div>
+
+<section aria-labelledby="summary-h">
+  <h2 id="summary-h">Summary for the last {{ months }} months</h2>
+  <ul class="kpis">
+    <li class="kpi"><span class="label">Revenue</span><strong class="value">₹{{ report.revenue|floatformat:"0g" }}</strong></li>
+    <li class="kpi"><span class="label">Orders</span><strong class="value">{{ report.orders }}</strong></li>
+    <li class="kpi"><span class="label">Copies sold</span><strong class="value">{{ report.units }}</strong></li>
+    <li class="kpi"><span class="label">Average order value</span><strong class="value">₹{{ report.average_order_value|floatformat:"0g" }}</strong></li>
+    <li class="kpi"><span class="label">This month vs last month</span>
+      <strong class="value">{% if report.change_percent is None %}n/a{% elif report.change_percent >= 0 %}<span aria-hidden="true">▲</span> +{{ report.change_percent }}%{% else %}<span aria-hidden="true">▼</span> {{ report.change_percent }}%{% endif %}</strong></li>
+  </ul>
+</section>
+
+{% if report.orders %}
+<section aria-labelledby="chart-h">
+  <h2 id="chart-h">Revenue by month</h2>
+  {% with chart=report.chart %}
+  <figure>
+    <svg class="chart" viewBox="0 0 {{ chart.width }} {{ chart.height }}" role="img" aria-labelledby="chart-title chart-desc">
+      <title id="chart-title">Revenue by month</title>
+      <desc id="chart-desc">Bar chart of your revenue for the last {{ months }} months. The same numbers are in the table below.</desc>
+      <line class="axis" x1="{{ chart.left }}" y1="{{ chart.top }}" x2="{{ chart.left }}" y2="{{ chart.baseline }}"/>
+      <line class="axis" x1="{{ chart.left }}" y1="{{ chart.baseline }}" x2="{{ chart.right_edge }}" y2="{{ chart.baseline }}"/>
+      <text x="{{ chart.left|add:'-6' }}" y="{{ chart.top|add:'4' }}" text-anchor="end">₹{{ chart.max_value|floatformat:"0g" }}</text>
+      <text x="{{ chart.left|add:'-6' }}" y="{{ chart.baseline }}" text-anchor="end">₹0</text>
+      {% for bar in chart.bars %}
+      <rect class="bar" x="{{ bar.x }}" y="{{ bar.y }}" width="{{ bar.w }}" height="{{ bar.h }}"/>
+      <text x="{{ bar.cx }}" y="{{ chart.label_y }}" text-anchor="middle">{{ bar.short }}</text>
+      {% endfor %}
+    </svg>
+    {% with last_month=report.monthly|last %}
+    <figcaption>Revenue per month from {{ report.monthly.0.label }} to {{ last_month.label }}.</figcaption>
+    {% endwith %}
+  </figure>
+  {% endwith %}
+  <details>
+    <summary>View the chart as a table</summary>
+    <div class="table-wrap" tabindex="0" role="region" aria-labelledby="monthly-cap">
+      <table>
+        <caption id="monthly-cap">Revenue, copies sold and orders by month</caption>
+        <thead><tr><th scope="col">Month</th><th scope="col" class="num">Revenue</th><th scope="col" class="num">Copies sold</th><th scope="col" class="num">Orders</th></tr></thead>
+        <tbody>
+          {% for row in report.monthly %}
+          <tr><th scope="row">{{ row.label }}</th><td class="num">₹{{ row.revenue|floatformat:"2g" }}</td><td class="num">{{ row.units }}</td><td class="num">{{ row.orders }}</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </details>
+</section>
+
+<section aria-labelledby="top-h">
+  <h2 id="top-h">Top selling books</h2>
+  <div class="table-wrap" tabindex="0" role="region" aria-labelledby="top-cap">
+    <table>
+      <caption id="top-cap">Your top 5 books by copies sold</caption>
+      <thead><tr><th scope="col">Rank</th><th scope="col">Title</th><th scope="col" class="num">Copies sold</th><th scope="col" class="num">Revenue</th></tr></thead>
+      <tbody>
+        {% for book in report.top_books %}
+        <tr><td>{{ forloop.counter }}</td><th scope="row">{{ book.book__title }}</th><td class="num">{{ book.units }}</td><td class="num">₹{{ book.revenue|floatformat:"2g" }}</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section aria-labelledby="genre-h">
+  <h2 id="genre-h">Revenue by genre</h2>
+  <div class="table-wrap" tabindex="0" role="region" aria-labelledby="genre-cap">
+    <table>
+      <caption id="genre-cap">Revenue per genre in this period</caption>
+      <thead><tr><th scope="col">Genre</th><th scope="col" class="num">Revenue</th></tr></thead>
+      <tbody>
+        {% for row in report.genres %}
+        <tr><th scope="row">{{ row.genre }}</th><td class="num">₹{{ row.revenue|floatformat:"2g" }}</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% else %}
+<p>None of your books have sold in this period yet.</p>
+{% endif %}
+{% endblock %}

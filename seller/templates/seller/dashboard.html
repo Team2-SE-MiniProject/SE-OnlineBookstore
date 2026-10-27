@@ -1,0 +1,104 @@
+{% extends "seller/layout.html" %}
+
+{% block title %}Seller dashboard · Online Bookstore{% endblock %}
+
+{% block seller_content %}
+<h1>Seller dashboard</h1>
+
+<section aria-labelledby="overview-h">
+  <h2 id="overview-h">Overview</h2>
+  <ul class="kpis">
+    <li class="kpi"><span class="label">Titles listed</span><strong class="value">{{ kpis.titles }}</strong></li>
+    <li class="kpi"><span class="label">Copies in stock</span><strong class="value">{{ kpis.units }}</strong></li>
+    <li class="kpi"><span class="label">Low stock titles</span><strong class="value">{{ kpis.low_stock }}</strong></li>
+    <li class="kpi"><span class="label">Out of stock titles</span><strong class="value">{{ kpis.out_of_stock }}</strong></li>
+    <li class="kpi"><span class="label">Copies sold</span><strong class="value">{{ kpis.units_sold }}</strong></li>
+  </ul>
+</section>
+
+<section aria-labelledby="books-h">
+  <h2 id="books-h">Your books</h2>
+  <div class="controls">
+    <form method="get" role="search" class="inline-form">
+      <div class="field">
+        <label for="q">Search your books</label>
+        <input type="search" id="q" name="q" value="{{ q }}" autocomplete="off">
+      </div>
+      <button type="submit">Search</button>
+      {% if q %}<a class="button secondary" href="{% url 'seller:dashboard' %}">Clear search</a>{% endif %}
+    </form>
+    <a class="button" href="{% url 'seller:book-add' %}">Add a book</a>
+  </div>
+
+  {% if books %}
+  <p>{{ books|length }} book{{ books|length|pluralize }} shown.</p>
+  <div class="table-wrap" tabindex="0" role="region" aria-labelledby="books-cap">
+    <table>
+      <caption id="books-cap">Your book listings and stock</caption>
+      <thead>
+        <tr>
+          <th scope="col">Title</th>
+          <th scope="col">Genre</th>
+          <th scope="col" class="num">Price</th>
+          <th scope="col" class="num">Stock</th>
+          <th scope="col">Status</th>
+          <th scope="col">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for book in books %}
+        <tr>
+          <th scope="row">{{ book.title }}<br><span class="muted">{{ book.author }}</span></th>
+          <td>{{ book.genre|default:"—" }}</td>
+          <td class="num">₹{{ book.price }}</td>
+          <td class="num">{{ book.stock }}</td>
+          <td><span class="badge {{ book.state.css }}"><span aria-hidden="true">{{ book.state.icon }}</span> {{ book.state.label }}</span></td>
+          <td class="actions">
+            <a href="{% url 'seller:book-edit' book.pk %}">Edit<span class="sr-only"> {{ book.title }}</span></a>
+            <a href="{% url 'seller:book-delete' book.pk %}">Delete<span class="sr-only"> {{ book.title }}</span></a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% elif q %}
+  <p>No books match “{{ q }}”.</p>
+  {% else %}
+  <p>You have not listed any books yet. <a href="{% url 'seller:book-add' %}">Add your first book</a>.</p>
+  {% endif %}
+</section>
+
+<section aria-labelledby="orders-h">
+  <h2 id="orders-h">Recent orders for your books</h2>
+  {% if recent_orders %}
+  <div class="table-wrap" tabindex="0" role="region" aria-labelledby="orders-cap">
+    <table>
+      <caption id="orders-cap">Latest five orders that include your books</caption>
+      <thead>
+        <tr>
+          <th scope="col">Order</th>
+          <th scope="col">Customer</th>
+          <th scope="col">Date</th>
+          <th scope="col" class="num">Your items</th>
+          <th scope="col">Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for order in recent_orders %}
+        <tr>
+          <th scope="row">#{{ order.pk }}</th>
+          <td>{{ order.user.get_username }}</td>
+          <td>{{ order.created_at|date:"j M Y" }}</td>
+          <td class="num">₹{{ order.seller_total }}</td>
+          <td>{{ order.status }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <p>No orders include your books yet.</p>
+  {% endif %}
+</section>
+{% endblock %}
