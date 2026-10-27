@@ -18,7 +18,6 @@ This file lists where the implementation differs from the submitted SRS v1.0, SA
 | D8 | Email verification result (BOOK-F-001) | A confirmation for the user | Opening the emailed link shows a small JSON message (`Email verified. You can now log in.`) instead of a styled page. | Time. A confirmation page is a small later improvement. |
 | D9 | Notifications (SRS 2.2, SAD 3.4) | Email and SMS | Both are sent in the background through Celery. Email covers registration and order confirmation. SMS covers order confirmation and goes to the phone number on the delivery address. By default both are printed in the worker log. Real email works through SMTP settings. A Twilio SMS backend exists but has not been tested against a live account. | Sending SMS in India needs DLT registration with the operators, which is beyond a student project. The backend is switchable through `SMS_BACKEND`. |
 | D10 | Test tooling (Test Plan sections 5 and 6) | pytest, Selenium or Playwright, JMeter or Locust | Django's built-in test runner (`manage.py test`). CI is GitHub Actions running flake8 (errors only) and the tests against PostgreSQL. End-to-end, load and security test tooling is planned for Sprint 2. Test names do not carry the TC-xxx IDs yet. | The RTM is updated in the "UAT, RTM update and Test Summary Report" story in Sprint 2. |
-| D11 | Seller and admin dashboards (SAD 3.3, BOOK-F-050 to 054) | Dashboards on Django Admin | Not built yet. Django's built-in admin is available at `/admin/`. | Planned for Sprint 2. |
 
 ## 2. Additions not described in the documents
 
@@ -38,6 +37,7 @@ This file lists where the implementation differs from the submitted SRS v1.0, SA
 - **Account lockout (BOOK-F-003):** 5 failed attempts lock the account for 15 minutes, answer 423, and write an audit log entry. The session login and the JWT login share one implementation.
 - **Error format (SAD 4.4):** a handler returns `{code, message}` for API errors. Validation errors add a `details` field. Unexpected server errors return a generic JSON 500 when `DEBUG` is off.
 - **Safe logging (SAD 4.4):** a log filter removes passwords, tokens, Bearer headers and card-like numbers from log messages and tracebacks.
+- **Admin action log (BOOK-SR-005):** changes made in the admin are recorded with time, user and action in a read-only "Admin action log", and security events in a read-only "Security event logs". Keeping these records for one year belongs to the audit logging story.
 
 ## 4. Known issues
 
