@@ -25,7 +25,10 @@ function check(file) {
     if (/user-scalable\s*=\s*no|maximum-scale\s*=\s*1(\.0)?\b/i.test(src)) add("1.4.4", "viewport disables zoom");
     if (!/<main[\s>]/i.test(src) && !/role=["']main/i.test(src)) add("1.3.1", "no <main> landmark");
     if (!/class=["'][^"']*skip/i.test(src)) add("2.4.1", "no skip link found");
-    if ((src.match(/<h1[\s>]/gi) || []).length !== 1) add("1.3.1", "page should have exactly one <h1>");
+    // Template base files (Django/Jinja {% block %}) get their <h1> from child templates, so only flag duplicates there.
+    const h1s = (src.match(/<h1[\s>]/gi) || []).length;
+    const isBaseTemplate = /\{%\s*block\s/.test(src);
+    if (isBaseTemplate ? h1s > 1 : h1s !== 1) add("1.3.1", isBaseTemplate ? "base template has more than one <h1>" : "page should have exactly one <h1>");
   }
 
   for (const m of src.matchAll(/<img\b[^>]*>/gi)) if (!/\balt=/i.test(m[0])) add("1.1.1", `image without alt: ${m[0].slice(0, 60)}`);
