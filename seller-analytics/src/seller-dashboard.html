@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Seller dashboard – Online Bookstore</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to main content</a>
+  <header class="site">
+    <p>Online Bookstore – Seller</p>
+    <nav aria-label="Seller">
+      <ul>
+        <li><a href="seller-dashboard.html" aria-current="page">Dashboard</a></li>
+        <li><a href="sales-analytics.html">Sales analytics</a></li>
+      </ul>
+    </nav>
+  </header>
+
+  <main id="main">
+    <h1>Seller dashboard</h1>
+
+    <section aria-labelledby="kpi-h">
+      <h2 id="kpi-h">Overview</h2>
+      <ul class="kpis" id="kpis"></ul>
+    </section>
+
+    <section aria-labelledby="inv-h">
+      <h2 id="inv-h">Inventory</h2>
+      <div class="controls">
+        <div>
+          <label for="search">Search by title or category</label>
+          <input type="search" id="search" autocomplete="off" aria-controls="inv-body">
+        </div>
+      </div>
+      <p id="inv-status" role="status" aria-live="polite" class="sr-only"></p>
+      <div class="table-wrap" tabindex="0" role="region" aria-labelledby="inv-cap">
+        <table>
+          <caption id="inv-cap">Your books and current stock</caption>
+          <thead>
+            <tr>
+              <th scope="col">Title</th>
+              <th scope="col">Category</th>
+              <th scope="col" class="num">Price</th>
+              <th scope="col" class="num">Stock</th>
+              <th scope="col">Status</th>
+            </tr>
+          </thead>
+          <tbody id="inv-body"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section aria-labelledby="ord-h">
+      <h2 id="ord-h">Recent orders</h2>
+      <div class="table-wrap" tabindex="0" role="region" aria-labelledby="ord-cap">
+        <table>
+          <caption id="ord-cap">Latest five orders</caption>
+          <thead>
+            <tr>
+              <th scope="col">Order</th>
+              <th scope="col">Customer</th>
+              <th scope="col">Date</th>
+              <th scope="col" class="num">Total</th>
+              <th scope="col">Status</th>
+            </tr>
+          </thead>
+          <tbody id="ord-body"></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <script src="data.js"></script>
+  <script src="analytics.js"></script>
+  <script src="dashboard.js"></script>
+</body>
+</html>
