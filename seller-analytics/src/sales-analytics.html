@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sales analytics – Online Bookstore</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to main content</a>
+  <header class="site">
+    <p>Online Bookstore – Seller</p>
+    <nav aria-label="Seller">
+      <ul>
+        <li><a href="seller-dashboard.html">Dashboard</a></li>
+        <li><a href="sales-analytics.html" aria-current="page">Sales analytics</a></li>
+      </ul>
+    </nav>
+  </header>
+
+  <main id="main">
+    <h1>Sales analytics</h1>
+
+    <div class="controls">
+      <div>
+        <label for="range">Time range</label>
+        <select id="range">
+          <option value="3">Last 3 months</option>
+          <option value="6">Last 6 months</option>
+          <option value="12" selected>Last 12 months</option>
+        </select>
+      </div>
+      <button type="button" id="export" class="secondary">Download CSV</button>
+    </div>
+    <p id="range-status" role="status" aria-live="polite" class="sr-only"></p>
+
+    <section aria-labelledby="sum-h">
+      <h2 id="sum-h">Summary</h2>
+      <ul class="kpis" id="summary"></ul>
+    </section>
+
+    <section aria-labelledby="chart-h">
+      <h2 id="chart-h">Revenue by month</h2>
+      <figure>
+        <div id="chart"></div>
+        <figcaption id="chart-cap"></figcaption>
+      </figure>
+      <details>
+        <summary>View chart data as a table</summary>
+        <div class="table-wrap" tabindex="0" role="region" aria-labelledby="m-cap">
+          <table>
+            <caption id="m-cap">Monthly revenue and orders</caption>
+            <thead><tr><th scope="col">Month</th><th scope="col" class="num">Revenue</th><th scope="col" class="num">Orders</th></tr></thead>
+            <tbody id="m-body"></tbody>
+          </table>
+        </div>
+      </details>
+    </section>
+
+    <section aria-labelledby="top-h">
+      <h2 id="top-h">Top selling books</h2>
+      <div class="table-wrap" tabindex="0" role="region" aria-labelledby="top-cap">
+        <table>
+          <caption id="top-cap">Top 5 books by units sold</caption>
+          <thead><tr><th scope="col">Rank</th><th scope="col">Title</th><th scope="col" class="num">Units sold</th><th scope="col" class="num">Revenue</th></tr></thead>
+          <tbody id="top-body"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section aria-labelledby="cat-h">
+      <h2 id="cat-h">Revenue by category</h2>
+      <div class="table-wrap" tabindex="0" role="region" aria-labelledby="cat-cap">
+        <table>
+          <caption id="cat-cap">Revenue per category (all time)</caption>
+          <thead><tr><th scope="col">Category</th><th scope="col" class="num">Revenue</th></tr></thead>
+          <tbody id="cat-body"></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <script src="data.js"></script>
+  <script src="analytics.js"></script>
+  <script src="analytics-page.js"></script>
+</body>
+</html>

@@ -1,0 +1,11 @@
+{
+  "name": "sprint2-vidya",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Sprint 2: seller dashboard, sales analytics, WCAG 2.1 AA pass",
+  "scripts": {
+    "test": "node --test test/analytics.test.js",
+    "a11y": "node tools/a11y-check.js src",
+    "contrast": "node tools/contrast.js"
+  }
+}
