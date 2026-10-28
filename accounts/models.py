@@ -25,6 +25,13 @@ class AccountLockout(models.Model):
 
 class AuditLog(models.Model):
     event = models.CharField(max_length=100)
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="audit_logs",
+    )
     username = models.CharField(max_length=150, db_index=True)
     details = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)

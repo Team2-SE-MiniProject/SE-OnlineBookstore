@@ -1,6 +1,8 @@
+
 from django.contrib import admin, messages
 
 from . import fulfilment
+from accounts.audit import log_admin_action
 from .models import Coupon, Order, OrderItem
 
 
@@ -119,6 +121,32 @@ class OrderAdmin(admin.ModelAdmin):
     @admin.action(description="Cancel selected orders")
     def mark_cancelled(self, request, queryset):
         self._move(request, queryset, fulfilment.CANCELLED)
+    def save_model(self, request, obj, form, change):
+        action = "UPDATED" if change else "CREATED"
+        super().save_model(request, obj, form, change)
+        log_admin_action(
+            request.user,
+            action,
+            f"Order ID {obj.pk}",
+        )
+
+    def delete_model(self, request, obj):
+        order_id = obj.pk
+        super().delete_model(request, obj)
+        log_admin_action(
+            request.user,
+            "DELETED",
+            f"Order ID {order_id}",
+        )
+
+    def delete_queryset(self, request, queryset):
+        order_ids = list(queryset.values_list("pk", flat=True))
+        super().delete_queryset(request, queryset)
+        log_admin_action(
+            request.user,
+            "BULK_DELETED",
+            f"Order IDs {order_ids}",
+        )
 
 
 @admin.register(Coupon)
@@ -126,3 +154,30 @@ class CouponAdmin(admin.ModelAdmin):
     list_display = ("code", "discount_percent", "is_active")
     list_filter = ("is_active",)
     search_fields = ("code",)
+    search_fields = ("code",)
+    def save_model(self, request, obj, form, change):
+        action = "UPDATED" if change else "CREATED"
+        super().save_model(request, obj, form, change)
+        log_admin_action(
+            request.user,
+            action,
+            f"Coupon {obj.code}",
+        )
+
+    def delete_model(self, request, obj):
+        code = obj.code
+        super().delete_model(request, obj)
+        log_admin_action(
+            request.user,
+            "DELETED",
+            f"Coupon {code}",
+        )
+
+    def delete_queryset(self, request, queryset):
+        codes = list(queryset.values_list("code", flat=True))
+        super().delete_queryset(request, queryset)
+        log_admin_action(
+            request.user,
+            "BULK_DELETED",
+            f"Coupon codes {codes}",
+        )
