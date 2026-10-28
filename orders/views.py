@@ -180,3 +180,36 @@ def checkout(request):
             response_data["couponCode"] = applied_coupon.code
 
         return Response(response_data, status=status.HTTP_201_CREATED)
+
+@api_view(["GET"])
+@authentication_classes([BasicAuthentication, SessionAuthentication])
+@permission_classes([IsAuthenticated])
+def order_history(request):
+    """Return the authenticated buyer's order history."""
+    orders = (
+        Order.objects.filter(user=request.user)
+        .prefetch_related("items__book")
+        .order_by("-created_at")
+    )
+
+    data = []
+    for order in orders:
+        data.append(
+            {
+                "orderId": order.pk,
+                "status": order.status,
+                "totalAmount": str(order.total_amount),
+                "createdAt": order.created_at.isoformat(),
+                "items": [
+                    {
+                        "bookId": item.book_id,
+                        "title": item.book.title,
+                        "quantity": item.quantity,
+                        "unitPrice": str(item.unit_price),
+                    }
+                    for item in order.items.all()
+                ],
+            }
+        )
+
+    return Response(data, status=status.HTTP_200_OK)
