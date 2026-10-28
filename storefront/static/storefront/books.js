@@ -91,7 +91,10 @@
     }
 
     const title = document.createElement("h2");
-    title.textContent = book.title;
+    const link = document.createElement("a");
+    link.href = "/books/" + book.id + "/";
+    link.textContent = book.title;
+    title.appendChild(link);
 
     const author = document.createElement("p");
     author.className = "author";
