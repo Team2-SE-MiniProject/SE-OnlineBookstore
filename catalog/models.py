@@ -1,4 +1,5 @@
 from django.db import models
+from django.conf import settings
 
 
 class Book(models.Model):
@@ -10,6 +11,13 @@ class Book(models.Model):
     stock = models.PositiveIntegerField(default=0)
     cover = models.URLField(blank=True)
     genre = models.CharField(max_length=100, blank=True)
+    seller = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="listed_books",
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
