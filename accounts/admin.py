@@ -4,14 +4,14 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.admin import UserAdmin as DjangoUserAdmin
 
 from .models import AccountLockout, Address, AuditLog
+from .audit import log_admin_action
 
 User = get_user_model()
 
-# Names shown at the top of the admin pages (the admin dashboard, SRS BOOK-F-050 to 054).
+# Names shown at the top of the admin pages.
 admin.site.site_header = "Online Bookstore Admin"
 admin.site.site_title = "Online Bookstore Admin"
 admin.site.index_title = "Dashboard"
-
 
 @admin.register(Address)
 class AddressAdmin(admin.ModelAdmin):
@@ -129,3 +129,30 @@ class SecurityEventLogAdmin(ReadOnlyAdmin):
     list_display = ("created_at", "event", "username", "details")
     list_filter = ("event",)
     search_fields = ("username", "details")
+
+    def save_model(self, request, obj, form, change):
+        action = "UPDATED" if change else "CREATED"
+        super().save_model(request, obj, form, change)
+        log_admin_action(
+            request.user,
+            action,
+            f"Address ID {obj.pk}",
+        )
+
+    def delete_model(self, request, obj):
+        address_id = obj.pk
+        super().delete_model(request, obj)
+        log_admin_action(
+            request.user,
+            "DELETED",
+            f"Address ID {address_id}",
+        )
+
+    def delete_queryset(self, request, queryset):
+        address_ids = list(queryset.values_list("pk", flat=True))
+        super().delete_queryset(request, queryset)
+        log_admin_action(
+            request.user,
+            "BULK_DELETED",
+            f"Address IDs {address_ids}",
+        )
