@@ -4,7 +4,9 @@ from django.shortcuts import redirect
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import ensure_csrf_cookie
 from django.views.decorators.http import require_POST
-from django.views.generic import TemplateView
+from django.views.generic import DetailView, TemplateView
+
+from catalog.models import Book
 
 # ensure_csrf_cookie makes sure the browser has a CSRF cookie, which the page's
 # JavaScript sends back as a header when it calls the APIs.
@@ -15,6 +17,15 @@ class BooksPageView(TemplateView):
     """Storefront home: the browsable, searchable book list."""
 
     template_name = "storefront/books.html"
+
+
+@method_decorator(ensure_csrf_cookie, name="dispatch")
+class BookDetailPageView(DetailView):
+    """One book with its ratings and reviews. The book itself is rendered by the server."""
+
+    model = Book
+    template_name = "storefront/book_detail.html"
+    context_object_name = "book"
 
 
 @method_decorator(ensure_csrf_cookie, name="dispatch")
