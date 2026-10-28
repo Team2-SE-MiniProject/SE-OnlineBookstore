@@ -170,3 +170,80 @@ class CheckoutAPITest(TestCase):
         )
         self.assertEqual(response.status_code, 400)
         self.assertFalse(Order.objects.filter(user=self.user).exists())
+
+class OrderHistoryAPITest(TestCase):
+    def setUp(self):
+        User = get_user_model()
+        self.user = User.objects.create_user(
+            username="history-user", password="testpass123"
+        )
+        self.other_user = User.objects.create_user(
+            username="other-history-user", password="testpass123"
+        )
+
+        self.book = Book.objects.create(
+            title="History Test Book",
+            author="Test Author",
+            price=Decimal("299.00"),
+            stock=10,
+        )
+
+        self.own_order = Order.objects.create(
+            user=self.user,
+            total_amount=Decimal("299.00"),
+            status="shipped",
+        )
+        OrderItem.objects.create(
+            order=self.own_order,
+            book=self.book,
+            quantity=1,
+            unit_price=Decimal("299.00"),
+        )
+
+        self.other_order = Order.objects.create(
+            user=self.other_user,
+            total_amount=Decimal("598.00"),
+            status="delivered",
+        )
+        OrderItem.objects.create(
+            order=self.other_order,
+            book=self.book,
+            quantity=2,
+            unit_price=Decimal("299.00"),
+        )
+
+        self.client = APIClient()
+        self.client.force_authenticate(user=self.user)
+        self.url = "/api/orders/history"
+
+    def test_buyer_sees_only_their_own_orders(self):
+        response = self.client.get(self.url)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(response.data), 1)
+        self.assertEqual(response.data[0]["orderId"], self.own_order.pk)
+
+    def test_history_includes_status_total_and_items(self):
+        response = self.client.get(self.url)
+
+        order = response.data[0]
+        self.assertEqual(order["status"], "shipped")
+        self.assertEqual(order["totalAmount"], "299.00")
+        self.assertEqual(len(order["items"]), 1)
+        self.assertEqual(order["items"][0]["title"], "History Test Book")
+        self.assertEqual(order["items"][0]["quantity"], 1)
+
+    def test_empty_history_returns_empty_list(self):
+        self.own_order.delete()
+
+        response = self.client.get(self.url)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data, [])
+
+    def test_history_requires_authentication(self):
+        self.client.force_authenticate(user=None)
+
+        response = self.client.get(self.url)
+
+        self.assertEqual(response.status_code, 401)
