@@ -20,8 +20,8 @@ from notifications.tasks import (
     send_order_confirmation_sms,
 )
 from catalog.models import Book
-from .models import Coupon, Order, OrderItem
-
+from . import fulfilment
+from .models import Coupon, Order, OrderItem, ReturnRefundRequest
 
 @api_view(["POST"])
 @authentication_classes([BasicAuthentication, SessionAuthentication])
@@ -211,5 +211,86 @@ def order_history(request):
                 ],
             }
         )
+
+    return Response(data, status=status.HTTP_200_OK)
+
+@api_view(["POST"])
+@authentication_classes([BasicAuthentication, SessionAuthentication])
+@permission_classes([IsAuthenticated])
+def create_return_refund_request(request, order_id):
+    """Allow a buyer to request a return/refund for their delivered order."""
+    reason = request.data.get("reason", "")
+    if not isinstance(reason, str) or not reason.strip():
+        return Response(
+            {"message": "A reason is required."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    try:
+        order = Order.objects.get(pk=order_id, user=request.user)
+    except Order.DoesNotExist:
+        return Response(
+            {"message": "Order not found."},
+            status=status.HTTP_404_NOT_FOUND,
+        )
+
+    if fulfilment.normalize(order.status) != fulfilment.DELIVERED:
+        return Response(
+            {"message": "Return/refund requests are only allowed for delivered orders."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    existing_request = ReturnRefundRequest.objects.filter(order=order).exists()
+    if existing_request:
+        return Response(
+            {"message": "A return/refund request already exists for this order."},
+            status=status.HTTP_409_CONFLICT,
+        )
+
+    refund_request = ReturnRefundRequest.objects.create(
+        order=order,
+        requested_by=request.user,
+        reason=reason.strip(),
+    )
+
+    return Response(
+        {
+            "id": refund_request.pk,
+            "orderId": order.pk,
+            "reason": refund_request.reason,
+            "status": refund_request.status,
+            "createdAt": refund_request.created_at.isoformat(),
+        },
+        status=status.HTTP_201_CREATED,
+    )
+
+@api_view(["GET"])
+@authentication_classes([BasicAuthentication, SessionAuthentication])
+@permission_classes([IsAuthenticated])
+def list_return_refund_requests(request):
+    """List return/refund requests visible to the authenticated user."""
+    requests = ReturnRefundRequest.objects.select_related(
+        "order", "requested_by", "order__user"
+    ).prefetch_related("order__items__book")
+
+    if request.user.is_superuser or request.user.groups.filter(name="admin").exists():
+        pass
+    elif request.user.groups.filter(name="seller").exists():
+        requests = requests.filter(order__items__book__seller=request.user).distinct()
+    else:
+        requests = requests.filter(order__user=request.user)
+
+    data = [
+        {
+            "id": refund_request.pk,
+            "orderId": refund_request.order_id,
+            "buyer": refund_request.order.user.username,
+            "reason": refund_request.reason,
+            "status": refund_request.status,
+            "createdAt": refund_request.created_at.isoformat(),
+            "updatedAt": refund_request.updated_at.isoformat(),
+        }
+        for refund_request in requests.order_by("-created_at")
+    ]
 
     return Response(data, status=status.HTTP_200_OK)
