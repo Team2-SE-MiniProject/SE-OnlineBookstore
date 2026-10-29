@@ -3,8 +3,7 @@ from django.contrib import admin, messages
 
 from . import fulfilment
 from accounts.audit import log_admin_action
-from .models import Coupon, Order, OrderItem
-
+from .models import Coupon, Order, OrderItem, ReturnRefundRequest
 
 class OrderItemInline(admin.TabularInline):
     model = OrderItem
@@ -181,3 +180,17 @@ class CouponAdmin(admin.ModelAdmin):
             "BULK_DELETED",
             f"Coupon codes {codes}",
         )
+
+@admin.register(ReturnRefundRequest)
+class ReturnRefundRequestAdmin(admin.ModelAdmin):
+    list_display = ("id", "order", "requested_by", "status", "created_at")
+    list_filter = ("status", "created_at")
+    search_fields = ("=order__id", "requested_by__username", "reason")
+    readonly_fields = ("order", "requested_by", "reason", "created_at", "updated_at")
+    ordering = ("-created_at",)
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return request.user.is_superuser

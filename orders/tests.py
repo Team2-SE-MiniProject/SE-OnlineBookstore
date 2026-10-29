@@ -247,3 +247,145 @@ class OrderHistoryAPITest(TestCase):
         response = self.client.get(self.url)
 
         self.assertEqual(response.status_code, 401)
+
+from accounts.roles import assign_role
+from orders.models import ReturnRefundRequest
+
+
+class ReturnRefundRequestAPITest(TestCase):
+    def setUp(self):
+        User = get_user_model()
+        self.buyer = User.objects.create_user(
+            username="refund-buyer", password="testpass123"
+        )
+        self.other_buyer = User.objects.create_user(
+            username="refund-other", password="testpass123"
+        )
+        self.seller = User.objects.create_user(
+            username="refund-seller", password="testpass123"
+        )
+        self.admin = User.objects.create_superuser(
+            username="refund-admin",
+            email="refund-admin@example.com",
+            password="testpass123",
+        )
+
+        assign_role(self.buyer, "buyer")
+        assign_role(self.other_buyer, "buyer")
+        assign_role(self.seller, "seller")
+
+        self.book = Book.objects.create(
+            title="Refund Test Book",
+            author="Test Author",
+            price=Decimal("100.00"),
+            stock=5,
+            seller=self.seller,
+        )
+        self.order = Order.objects.create(
+            user=self.buyer,
+            total_amount=Decimal("100.00"),
+            status="DELIVERED",
+        )
+        OrderItem.objects.create(
+            order=self.order,
+            book=self.book,
+            quantity=1,
+            unit_price=Decimal("100.00"),
+        )
+
+        self.client = APIClient()
+        self.client.force_authenticate(user=self.buyer)
+        self.create_url = f"/api/orders/{self.order.pk}/return-refund"
+        self.list_url = "/api/orders/return-refund-requests"
+
+    def test_buyer_can_request_refund_for_delivered_order(self):
+        response = self.client.post(
+            self.create_url,
+            {"reason": "The book arrived damaged."},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 201, response.data)
+        self.assertEqual(response.data["status"], "PENDING")
+        self.assertTrue(
+            ReturnRefundRequest.objects.filter(
+                order=self.order, requested_by=self.buyer
+            ).exists()
+        )
+
+    def test_request_rejected_if_order_not_delivered(self):
+        self.order.status = "SHIPPED"
+        self.order.save(update_fields=["status"])
+
+        response = self.client.post(
+            self.create_url,
+            {"reason": "I changed my mind."},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertFalse(ReturnRefundRequest.objects.exists())
+
+    def test_buyer_cannot_request_refund_for_another_users_order(self):
+        other_order = Order.objects.create(
+            user=self.other_buyer,
+            total_amount=Decimal("100.00"),
+            status="DELIVERED",
+        )
+
+        response = self.client.post(
+            f"/api/orders/{other_order.pk}/return-refund",
+            {"reason": "Please refund."},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 404)
+
+    def test_reason_is_required(self):
+        response = self.client.post(
+            self.create_url,
+            {"reason": "   "},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 400)
+
+    def test_buyer_can_view_own_request_status(self):
+        refund_request = ReturnRefundRequest.objects.create(
+            order=self.order,
+            requested_by=self.buyer,
+            reason="Damaged book",
+        )
+
+        response = self.client.get(self.list_url)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(response.data), 1)
+        self.assertEqual(response.data[0]["id"], refund_request.pk)
+        self.assertEqual(response.data[0]["status"], "PENDING")
+
+    def test_seller_can_view_request_for_their_book(self):
+        ReturnRefundRequest.objects.create(
+            order=self.order,
+            requested_by=self.buyer,
+            reason="Damaged book",
+        )
+        self.client.force_authenticate(user=self.seller)
+
+        response = self.client.get(self.list_url)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(response.data), 1)
+
+    def test_admin_can_view_all_requests(self):
+        ReturnRefundRequest.objects.create(
+            order=self.order,
+            requested_by=self.buyer,
+            reason="Damaged book",
+        )
+        self.client.force_authenticate(user=self.admin)
+
+        response = self.client.get(self.list_url)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(response.data), 1)
