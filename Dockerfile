@@ -17,5 +17,4 @@ USER app
 
 EXPOSE 8000
 
-# Development server. See "Deployment plan" in docs/SETUP.md for a production setup.
-CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]
+CMD ["gunicorn", "bookstore.wsgi:application", "--bind", "0.0.0.0:8000", "--workers", "4", "--threads", "4", "--worker-class", "gthread"]

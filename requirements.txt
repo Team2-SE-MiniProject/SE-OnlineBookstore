@@ -25,3 +25,5 @@ tzdata==2026.5
 tzlocal==5.4.5
 vine==5.1.0
 wcwidth==0.9.3
+gunicorn==26.2.0
+whitenoise==6.9.0
