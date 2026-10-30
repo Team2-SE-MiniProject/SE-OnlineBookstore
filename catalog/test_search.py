@@ -1,3 +1,4 @@
+from django.core.cache import cache
 from decimal import Decimal
 from rest_framework.test import APITestCase
 from .models import Book
@@ -6,6 +7,9 @@ from reviews.models import Review
 
 
 class SearchFilterSortTests(APITestCase):
+    def setUp(self):
+        cache.clear()
+
     url = "/api/books/"
 
     @classmethod

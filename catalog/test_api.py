@@ -1,5 +1,5 @@
 from decimal import Decimal
-
+from django.core.cache import cache
 from rest_framework.test import APITestCase
 
 from .models import Book
@@ -12,6 +12,10 @@ def make_books(n):
 
 
 class BookListTests(APITestCase):
+
+    def setUp(self):
+        cache.clear()
+
     url = "/api/books/"
 
     def test_returns_expected_fields(self):
