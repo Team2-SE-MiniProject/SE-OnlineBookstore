@@ -32,7 +32,7 @@ def bad_request(code, message):
 
 def parse_price(raw):
     value = Decimal(raw)  # raises InvalidOperation for text like "abc"
-    if not value.is_finite() or value < 0:  # rejects NaN, Infinity and negatives
+    if not value.is_finite() or value < 0 or value > Decimal("99999999.99"):  # NaN, negatives, too big
         raise InvalidOperation
     return value
 
