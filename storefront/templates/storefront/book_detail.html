@@ -1,0 +1,70 @@
+{% extends "storefront/base.html" %}
+{% load static %}
+
+{% block title %}{{ book.title }} · Online Bookstore{% endblock %}
+
+{% block content %}
+<article class="book-detail" data-book-id="{{ book.pk }}">
+  <div class="detail-cover">
+    {% if book.cover %}<img src="{{ book.cover }}" alt="" onerror="this.remove()">{% endif %}
+  </div>
+
+  <div class="detail-info">
+    <h1>{{ book.title }}</h1>
+    <p class="author">by {{ book.author }}</p>
+    <p class="detail-meta">
+      {% if book.genre %}Genre: {{ book.genre }}{% endif %}
+      {% if book.genre and book.isbn %} · {% endif %}
+      {% if book.isbn %}ISBN {{ book.isbn }}{% endif %}
+    </p>
+
+    <p id="rating-summary" class="rating-summary">Loading ratings…</p>
+
+    <p class="price">₹{{ book.price }}</p>
+    <p class="stock">{% if book.stock > 0 %}{{ book.stock }} in stock{% else %}Out of stock{% endif %}</p>
+    <button type="button" id="add-to-cart" class="btn"{% if book.stock == 0 %} disabled{% endif %}>Add to cart</button>
+
+    {% if book.description %}<p class="description">{{ book.description }}</p>{% endif %}
+  </div>
+</article>
+
+<section class="panel" aria-labelledby="reviews-heading">
+  <h2 id="reviews-heading">Ratings and reviews</h2>
+  <ul id="review-list" class="review-list"></ul>
+  <p id="reviews-status" class="status" role="status" aria-live="polite"></p>
+  <button type="button" id="more-reviews" class="btn btn-secondary" hidden>Show more reviews</button>
+</section>
+
+<section class="panel" aria-labelledby="write-heading">
+  <h2 id="write-heading">Write a review</h2>
+  {% if user.is_authenticated %}
+  <form id="review-form" class="card-form" novalidate>
+    <div class="field">
+      <label for="rating">Your rating</label>
+      <select id="rating" name="rating" required>
+        <option value="">Choose a rating</option>
+        <option value="5">5 – Excellent</option>
+        <option value="4">4 – Good</option>
+        <option value="3">3 – Okay</option>
+        <option value="2">2 – Poor</option>
+        <option value="1">1 – Terrible</option>
+      </select>
+    </div>
+
+    <div class="field">
+      <label for="comment">Your review (optional)</label>
+      <textarea id="comment" name="comment" rows="4" maxlength="2000"></textarea>
+    </div>
+
+    <p id="review-error" class="form-error" role="alert"></p>
+    <button type="submit" class="btn">Submit review</button>
+  </form>
+  {% else %}
+  <p><a href="{% url 'storefront:login' %}?next={{ request.path }}">Log in</a> to write a review.</p>
+  {% endif %}
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script src="{% static 'storefront/book-detail.js' %}"></script>
+{% endblock %}
