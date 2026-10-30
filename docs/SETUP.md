@@ -81,3 +81,98 @@ The project runs locally for the course demo. A production setup would use:
 - **Workers:** the Celery worker as a separate service, with a real SMTP provider for email.
 - **Static files:** `collectstatic`, served by nginx or a CDN.
 - **Payments:** gateway keys (Razorpay or Stripe) from environment variables.
+
+## Database Backups and Replication
+
+### Automated PostgreSQL Backups
+
+The Docker Compose setup includes a dedicated `backup` service.
+
+- **Backup tool:** PostgreSQL `pg_dump`.
+- **Format:** Custom compressed dump (`.dump`).
+- **Frequency:** Every 24 hours.
+- **Retention:** 7 days.
+- **Storage:** Persistent Docker volume named `db_backups`.
+- **Startup behaviour:** An initial backup is created when the backup service starts.
+
+The backup interval and retention period can be configured using environment variables:
+
+```bash
+BACKUP_INTERVAL_SECONDS=86400
+BACKUP_RETENTION_DAYS=7
+```
+
+Useful commands:
+
+```bash
+# Start the backup service
+docker compose up -d backup
+
+# View backup logs
+docker compose logs backup
+
+# List available backups
+docker compose exec backup ls -lh /backups
+```
+### Restoring a Database Backup
+
+1. Stop the application services before restoring:
+
+```bash
+docker compose stop web worker
+```
+
+2. List the available backups:
+
+```bash
+docker compose exec backup ls -lh /backups
+```
+
+3. Restore the selected backup:
+
+```bash
+docker compose exec backup pg_restore \
+  -h db -U bookstore -d online_bookstore \
+  --clean --if-exists --no-owner \
+  /backups/online_bookstore_TIMESTAMP.dump
+```
+
+Replace `TIMESTAMP` with the actual backup filename.
+
+**Warning:** The `--clean` option replaces existing database objects. Verify the backup before restoring.
+
+4. Restart the application:
+
+```bash
+docker compose start web worker
+```
+
+### Standby PostgreSQL Database Replica
+
+A production deployment can use PostgreSQL streaming replication to maintain a standby database.
+
+**Architecture:**
+
+- **Primary database:** Handles application reads and writes.
+- **Standby database:** Receives and replays database changes from the primary.
+- **Replication:** Uses PostgreSQL streaming replication to transfer database changes.
+- **Failover:** If the primary becomes unavailable, the standby can be promoted to become the new primary.
+
+**Configuration requirements:**
+
+1. Configure the primary PostgreSQL server with:
+   - `wal_level = replica`
+   - `max_wal_senders` greater than zero.
+   - A replication user with the `REPLICATION` privilege.
+   - Appropriate replication access rules in `pg_hba.conf`.
+
+2. Configure the standby server:
+   - Initialize it using `pg_basebackup`.
+   - Configure `primary_conninfo` to connect to the primary.
+   - Create the `standby.signal` file to enable standby mode.
+
+3. Monitor replication lag and standby availability.
+
+4. Test failover and recovery procedures regularly.
+
+**Current implementation status:** Automated database backups are configured in Docker Compose. A separate standby replica is documented as a production reliability design but is not deployed in the local development environment.
