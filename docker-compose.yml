@@ -59,7 +59,7 @@ services:
 
   web:
     <<: *app
-    command: sh -c "python manage.py migrate && python manage.py seed_books && python manage.py runserver 0.0.0.0:8000"
+    command: sh -c "python manage.py migrate && python manage.py seed_books && python manage.py collectstatic --noinput && gunicorn bookstore.wsgi:application --bind 0.0.0.0:8000 --workers 4 --threads 4 --worker-class gthread"
     ports:
       - "8000:8000"
 
