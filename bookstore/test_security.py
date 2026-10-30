@@ -1,32 +1,26 @@
 """
-System test (Test Plan section 5): the whole customer journey, driven through the real URLs
-the way the browser pages use them. The verification email is not sent in tests, so the
-verification link is built from the same token generator the registration view uses.
-"""
-import json
+System test (Test Plan section 5): the whole customer journey, driven through
+the real URLs.
 
-from django.contrib.auth import get_user_model
-from django.test import Client, TestCase
-from django.urls import reverse
-from django.utils.encoding import force_bytes
-from django.utils.http import urlsafe_base64_encode
-
-from accounts.registration import verification_token
-from catalog.models import Book
-from orders.models import Order
-from reviews.models import Review
 Security tests (Test Plan section 5.1 and SRS BOOK-SR-001 to 005):
-fuzzing, access control, CSRF, token tampering, password hashing, no card data stored,
-and escaping of user-supplied text on the pages.
+fuzzing, access control, CSRF, token tampering, password hashing,
+no card data stored, and escaping of user-supplied text.
 """
+
 import json
 
 from django.apps import apps
 from django.contrib.auth import get_user_model
 from django.test import Client, TestCase, override_settings
+from django.urls import reverse
+from django.utils.encoding import force_bytes
+from django.utils.http import urlsafe_base64_encode
 
 from accounts.models import Address
+from accounts.registration import verification_token
 from catalog.models import Book
+from orders.models import Order
+from reviews.models import Review
 
 FUZZ = [
     "' OR '1'='1",
