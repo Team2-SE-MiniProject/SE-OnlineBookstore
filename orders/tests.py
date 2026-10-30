@@ -170,3 +170,33 @@ class CheckoutAPITest(TestCase):
         )
         self.assertEqual(response.status_code, 400)
         self.assertFalse(Order.objects.filter(user=self.user).exists())
+
+
+    def test_checkout_persists_order_and_order_items_in_database(self):
+        response = self.client.post(
+            self.url,
+            {"cartId": self.cart.pk, "addressId": self.address.pk},
+            format="json",
+        )
+        self.assertEqual(response.status_code, 201, response.data)
+
+        order = Order.objects.get(pk=response.data["orderId"])
+        order_item = OrderItem.objects.get(order=order, book=self.book)
+
+        self.assertEqual(order.user_id, self.user.pk)
+        self.assertEqual(order.delivery_address_id, self.address.pk)
+        self.assertEqual(order_item.quantity, 2)
+        self.assertEqual(order_item.unit_price, Decimal("299.00"))
+        self.assertEqual(order.total_amount, Decimal("598.00"))
+
+    def test_checkout_does_not_reduce_stock_before_payment_confirmation(self):
+        original_stock = self.book.stock
+        response = self.client.post(
+            self.url,
+            {"cartId": self.cart.pk, "addressId": self.address.pk},
+            format="json",
+        )
+        self.assertEqual(response.status_code, 201, response.data)
+
+        self.book.refresh_from_db()
+        self.assertEqual(self.book.stock, original_stock)
