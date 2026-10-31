@@ -421,3 +421,43 @@ class ReturnRefundRequestAPITest(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(len(response.data), 1)
 
+
+from unittest.mock import MagicMock, patch
+from django.test import SimpleTestCase
+from decimal import Decimal
+from types import SimpleNamespace
+
+from orders.payment_gateway import create_payment_order
+
+
+class RazorpayGatewayTest(SimpleTestCase):
+    @patch("orders.payment_gateway.razorpay.Client")
+    def test_creates_gateway_order_in_paise(self, client_class):
+        client = MagicMock()
+        client.order.create.return_value = {
+            "id": "order_test123",
+            "amount": 59800,
+            "currency": "INR",
+        }
+        client_class.return_value = client
+
+        with patch("orders.payment_gateway.settings.RAZORPAY_KEY_ID", "rzp_test_key", create=True), \
+             patch("orders.payment_gateway.settings.RAZORPAY_KEY_SECRET", "test_secret", create=True):
+            order = SimpleNamespace(pk=42, total_amount=Decimal("598.00"))
+            result = create_payment_order(order)
+
+        client.order.create.assert_called_once_with(
+            data={"amount": 59800, "currency": "INR", "receipt": "42"}
+        )
+        self.assertEqual(result["id"], "order_test123")
+
+    @patch("orders.payment_gateway.razorpay.Client")
+    def test_rejects_missing_credentials(self, client_class):
+        with patch("orders.payment_gateway.settings.RAZORPAY_KEY_ID", "", create=True), \
+             patch("orders.payment_gateway.settings.RAZORPAY_KEY_SECRET", "", create=True):
+            with self.assertRaises(RuntimeError):
+                create_payment_order(
+                    SimpleNamespace(pk=1, total_amount=Decimal("10.00"))
+                )
+
+        client_class.assert_not_called()
