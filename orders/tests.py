@@ -1,4 +1,5 @@
 from decimal import Decimal
+from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
 from django.test import TestCase
@@ -72,6 +73,9 @@ class CheckoutAPITest(TestCase):
         self.client = APIClient()
         self.client.force_authenticate(user=self.user)
         self.url = "/api/orders/checkout"
+        gateway_patcher = patch("orders.views.create_payment_order", return_value={"id": "order_test_123"})
+        gateway_patcher.start()
+        self.addCleanup(gateway_patcher.stop)
 
     def test_checkout_creates_pending_order_and_returns_payment_url(self):
         response = self.client.post(
