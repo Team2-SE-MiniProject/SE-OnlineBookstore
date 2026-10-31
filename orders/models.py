@@ -1,13 +1,11 @@
 from django.conf import settings
 from django.db import models
-
 from accounts.models import Address
 from catalog.models import Book
 
 
 class Coupon(models.Model):
     """Simple percentage coupon used by the checkout endpoint."""
-
     code = models.CharField(max_length=40, unique=True)
     discount_percent = models.DecimalField(max_digits=5, decimal_places=2)
     is_active = models.BooleanField(default=True)
@@ -17,22 +15,14 @@ class Coupon(models.Model):
 
 
 class Order(models.Model):
-    user = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        on_delete=models.CASCADE,
-        related_name="orders",
-    )
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="orders")
     books = models.ManyToManyField(Book, related_name="orders")
-    delivery_address = models.ForeignKey(
-        Address,
-        on_delete=models.PROTECT,
-        related_name="orders",
-        null=True,
-        blank=True,
-    )
+    delivery_address = models.ForeignKey(Address, on_delete=models.PROTECT, related_name="orders", null=True, blank=True)
     total_amount = models.DecimalField(max_digits=10, decimal_places=2)
     status = models.CharField(max_length=20, default="pending")
     created_at = models.DateTimeField(auto_now_add=True)
+    razorpay_order_id = models.CharField(max_length=100, blank=True, default="", db_index=True)
+    razorpay_payment_id = models.CharField(max_length=100, blank=True, default="")
 
     def __str__(self):
         return f"Order {self.id} - {self.user}"
@@ -53,6 +43,7 @@ class OrderItem(models.Model):
     def __str__(self):
         return f"{self.quantity} x {self.book.title} (order {self.order_id})"
 
+
 class ReturnRefundRequest(models.Model):
     class Status(models.TextChoices):
         PENDING = "PENDING", "Pending"
@@ -60,22 +51,10 @@ class ReturnRefundRequest(models.Model):
         REJECTED = "REJECTED", "Rejected"
         COMPLETED = "COMPLETED", "Completed"
 
-    order = models.ForeignKey(
-        Order,
-        on_delete=models.CASCADE,
-        related_name="return_refund_requests",
-    )
-    requested_by = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        on_delete=models.CASCADE,
-        related_name="return_refund_requests",
-    )
+    order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name="return_refund_requests")
+    requested_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="return_refund_requests")
     reason = models.TextField()
-    status = models.CharField(
-        max_length=20,
-        choices=Status.choices,
-        default=Status.PENDING,
-    )
+    status = models.CharField(max_length=20, choices=Status.choices, default=Status.PENDING)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

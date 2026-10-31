@@ -4,6 +4,7 @@ the way the browser pages use them. The verification email is not sent in tests,
 verification link is built from the same token generator the registration view uses.
 """
 import json
+from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
 from django.test import Client, TestCase
@@ -33,10 +34,15 @@ class CustomerJourneyTests(TestCase):
             price="499.00", stock=5, isbn="9780441013593",
         )
         Book.objects.create(title="Emma", author="Jane Austen", genre="Classic", price="199.00", stock=3)
-
-    def test_register_to_shipped_order_and_review(self):
+    @patch("orders.views.create_payment_order")
+    def test_register_to_shipped_order_and_review(self, mock_create_payment_order):
         customer = Client()
         password = "Str0ng!Pass#2026"
+        mock_create_payment_order.return_value = {
+    "id": "order_test_123",
+    "amount": 99800,
+    "currency": "INR",
+}
 
         # 1. Register. The account stays inactive until the emailed link is opened.
         response = post_json(
