@@ -1,4 +1,5 @@
 from decimal import Decimal
+from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
 from django.test import TestCase
@@ -8,6 +9,13 @@ from accounts.models import Address
 from cart.models import Cart, CartItem
 from catalog.models import Book
 from .models import Coupon, Order, OrderItem
+
+from unittest.mock import MagicMock, patch
+from django.test import SimpleTestCase
+from decimal import Decimal
+from types import SimpleNamespace
+
+from orders.payment_gateway import create_payment_order
 
 
 class OrderModelTest(TestCase):
@@ -72,6 +80,9 @@ class CheckoutAPITest(TestCase):
         self.client = APIClient()
         self.client.force_authenticate(user=self.user)
         self.url = "/api/orders/checkout"
+        gateway_patcher = patch("orders.views.create_payment_order", return_value={"id": "order_test_123"})
+        gateway_patcher.start()
+        self.addCleanup(gateway_patcher.stop)
 
     def test_checkout_creates_pending_order_and_returns_payment_url(self):
         response = self.client.post(
@@ -170,6 +181,37 @@ class CheckoutAPITest(TestCase):
         )
         self.assertEqual(response.status_code, 400)
         self.assertFalse(Order.objects.filter(user=self.user).exists())
+
+
+
+    def test_checkout_persists_order_and_order_items_in_database(self):
+        response = self.client.post(
+            self.url,
+            {"cartId": self.cart.pk, "addressId": self.address.pk},
+            format="json",
+        )
+        self.assertEqual(response.status_code, 201, response.data)
+
+        order = Order.objects.get(pk=response.data["orderId"])
+        order_item = OrderItem.objects.get(order=order, book=self.book)
+
+        self.assertEqual(order.user_id, self.user.pk)
+        self.assertEqual(order.delivery_address_id, self.address.pk)
+        self.assertEqual(order_item.quantity, 2)
+        self.assertEqual(order_item.unit_price, Decimal("299.00"))
+        self.assertEqual(order.total_amount, Decimal("598.00"))
+
+    def test_checkout_does_not_reduce_stock_before_payment_confirmation(self):
+        original_stock = self.book.stock
+        response = self.client.post(
+            self.url,
+            {"cartId": self.cart.pk, "addressId": self.address.pk},
+            format="json",
+        )
+        self.assertEqual(response.status_code, 201, response.data)
+
+        self.book.refresh_from_db()
+        self.assertEqual(self.book.stock, original_stock)
 
 class OrderHistoryAPITest(TestCase):
     def setUp(self):
@@ -389,3 +431,36 @@ class ReturnRefundRequestAPITest(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(len(response.data), 1)
+
+
+class RazorpayGatewayTest(SimpleTestCase):
+    @patch("orders.payment_gateway.razorpay.Client")
+    def test_creates_gateway_order_in_paise(self, client_class):
+        client = MagicMock()
+        client.order.create.return_value = {
+            "id": "order_test123",
+            "amount": 59800,
+            "currency": "INR",
+        }
+        client_class.return_value = client
+
+        with patch("orders.payment_gateway.settings.RAZORPAY_KEY_ID", "rzp_test_key", create=True), \
+             patch("orders.payment_gateway.settings.RAZORPAY_KEY_SECRET", "test_secret", create=True):
+            order = SimpleNamespace(pk=42, total_amount=Decimal("598.00"))
+            result = create_payment_order(order)
+
+        client.order.create.assert_called_once_with(
+            data={"amount": 59800, "currency": "INR", "receipt": "42"}
+        )
+        self.assertEqual(result["id"], "order_test123")
+
+    @patch("orders.payment_gateway.razorpay.Client")
+    def test_rejects_missing_credentials(self, client_class):
+        with patch("orders.payment_gateway.settings.RAZORPAY_KEY_ID", "", create=True), \
+             patch("orders.payment_gateway.settings.RAZORPAY_KEY_SECRET", "", create=True):
+            with self.assertRaises(RuntimeError):
+                create_payment_order(
+                    SimpleNamespace(pk=1, total_amount=Decimal("10.00"))
+                )
+
+        client_class.assert_not_called()

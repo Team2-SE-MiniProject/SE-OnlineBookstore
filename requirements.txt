@@ -28,3 +28,4 @@ wcwidth==0.9.3
 gunicorn==26.2.0
 whitenoise==6.9.0
 reportlab==5.1.0
+razorpay==2.0.1

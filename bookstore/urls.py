@@ -1,6 +1,7 @@
 """URL configuration for the bookstore project."""
 from django.contrib import admin
 from django.urls import include, path
+from monitoring.views import health_check, metrics
 
 urlpatterns = [
     path("admin/", admin.site.urls),
@@ -13,4 +14,6 @@ urlpatterns = [
     path("api/cart/", include("cart.urls")),
     path("", include("storefront.urls")),
     path("api/auth/", include("accounts.api_urls")),
+    path("health/", health_check, name="health-check"),
+    path("metrics/", metrics, name="monitoring-metrics"),
 ]

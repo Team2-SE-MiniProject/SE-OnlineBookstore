@@ -67,5 +67,25 @@ services:
     <<: *app
     command: celery -A bookstore worker -l info
 
+  backup:
+    image: postgres:16
+    environment:
+      DB_HOST: db
+      DB_PORT: "5432"
+      DB_NAME: online_bookstore
+      DB_USER: bookstore
+      PGPASSWORD: bookstore
+      BACKUP_INTERVAL_SECONDS: ${BACKUP_INTERVAL_SECONDS:-86400}
+      BACKUP_RETENTION_DAYS: ${BACKUP_RETENTION_DAYS:-7}
+    volumes:
+      - ./scripts/backup-db.sh:/scripts/backup-db.sh:ro
+      - db_backups:/backups
+    entrypoint: ["/bin/sh", "/scripts/backup-db.sh"]
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
 volumes:
   pgdata:
+  db_backups:

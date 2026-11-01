@@ -7,13 +7,33 @@ from .views import (
     list_return_refund_requests,
     download_invoice,
     order_confirmation,
+    verify_payment,
+    razorpay_webhook,
 )
 
 urlpatterns = [
     path("checkout", checkout, name="order-checkout"),
     path("history", order_history, name="order-history"),
-    path("<int:order_id>/return-refund", create_return_refund_request, name="create-return-refund-request"),
-    path("return-refund-requests", list_return_refund_requests, name="list-return-refund-requests"),
-    path("<int:order_id>/invoice", download_invoice, name="order-download-invoice"),
-    path("<int:order_id>/confirmation", order_confirmation, name="order-confirmation"),
+    path(
+        "<int:order_id>/return-refund",
+        create_return_refund_request,
+        name="create-return-refund-request",
+    ),
+    path(
+        "return-refund-requests",
+        list_return_refund_requests,
+        name="list-return-refund-requests",
+    ),
+    path(
+        "<int:order_id>/invoice",
+        download_invoice,
+        name="download-invoice",
+    ),
+    path(
+        "<int:order_id>/confirmation",
+        order_confirmation,
+        name="order-confirmation",
+    ),
+    path("verify-payment", verify_payment, name="verify-payment"),
+    path("razorpay-webhook", razorpay_webhook, name="razorpay-webhook"),
 ]
