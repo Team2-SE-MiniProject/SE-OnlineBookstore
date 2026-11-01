@@ -16,12 +16,14 @@ from accounts.models import Address
 from cart.models import Cart
 from notifications.tasks import (
     enqueue_task_safely,
-    send_order_confirmation_email,
     send_order_confirmation_sms,
 )
 from catalog.models import Book
 from . import fulfilment
 from .models import Coupon, Order, OrderItem, ReturnRefundRequest
+from django.http import HttpResponse
+from django.shortcuts import get_object_or_404, render
+from .invoice import generate_invoice_pdf
 
 @api_view(["POST"])
 @authentication_classes([BasicAuthentication, SessionAuthentication])
@@ -140,11 +142,6 @@ def checkout(request):
             delivery_address=address,
             total_amount=total,
             status="PENDING",
-        )
-        transaction.on_commit(
-            lambda order_id=order.pk: enqueue_task_safely(
-                send_order_confirmation_email, order_id
-            )
         )
         
         transaction.on_commit(
@@ -294,3 +291,53 @@ def list_return_refund_requests(request):
     ]
 
     return Response(data, status=status.HTTP_200_OK)
+
+def _order_is_paid(order):
+    """Only expose paid orders' confirmation and invoice."""
+    return str(order.status).upper() in {"PAID", "SHIPPED", "DELIVERED"}
+
+
+@api_view(["GET"])
+@authentication_classes([BasicAuthentication, SessionAuthentication])
+@permission_classes([IsAuthenticated])
+def download_invoice(request, order_id):
+    order = get_object_or_404(
+        Order.objects.prefetch_related("items__book"),
+        pk=order_id,
+        user=request.user,
+    )
+    if not _order_is_paid(order):
+        return Response(
+            {"error": "Invoice is available only after successful payment."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    response = HttpResponse(generate_invoice_pdf(order), content_type="application/pdf")
+    response["Content-Disposition"] = f'attachment; filename="invoice-{order.pk}.pdf"'
+    return response
+
+
+@api_view(["GET"])
+@authentication_classes([BasicAuthentication, SessionAuthentication])
+@permission_classes([IsAuthenticated])
+def order_confirmation(request, order_id):
+    order = get_object_or_404(
+        Order.objects.prefetch_related("items__book"),
+        pk=order_id,
+        user=request.user,
+    )
+    if not _order_is_paid(order):
+        return Response(
+            {"error": "Confirmation is available after successful payment."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+    items = list(order.items.select_related("book").all())
+    for item in items:
+        item.line_total = item.unit_price * item.quantity
+    subtotal = sum((item.line_total for item in items), Decimal("0.00"))
+    discount = max(subtotal - order.total_amount, Decimal("0.00"))
+    return render(
+        request,
+        "orders/order_confirmation.html",
+        {"order": order, "items": items, "subtotal": subtotal, "discount": discount},
+    )
