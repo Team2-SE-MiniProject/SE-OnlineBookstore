@@ -34,6 +34,6 @@ urlpatterns = [
         order_confirmation,
         name="order-confirmation",
     ),
-    path("verify-payment", verify_payment, name="verify-payment"),
-    path("razorpay-webhook", razorpay_webhook, name="razorpay-webhook"),
+    path("<int:order_id>/verify-payment", verify_payment, name="verify-payment"),
+    path("webhooks/razorpay", razorpay_webhook, name="razorpay-webhook"),
 ]
