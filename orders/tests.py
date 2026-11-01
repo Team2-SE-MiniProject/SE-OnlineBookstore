@@ -464,3 +464,238 @@ class RazorpayGatewayTest(SimpleTestCase):
                 )
 
         client_class.assert_not_called()
+class PaymentVerificationIntegrationTests(TestCase):
+    def setUp(self):
+        User = get_user_model()
+        self.user = User.objects.create_user(
+            username="payment-test-user",
+            password="testpassword123",
+        )
+
+        self.book = Book.objects.create(
+            title="Payment Test Book",
+            author="Test Author",
+            price=Decimal("100.00"),
+            stock=10,
+        )
+
+        self.order = Order.objects.create(
+            user=self.user,
+            total_amount=Decimal("100.00"),
+            status="PENDING",
+            razorpay_order_id="order_test_123",
+        )
+
+        OrderItem.objects.create(
+            order=self.order,
+            book=self.book,
+            quantity=1,
+            unit_price=Decimal("100.00"),
+        )
+
+        self.order.books.add(self.book)
+
+        self.client = APIClient()
+        self.client.force_authenticate(user=self.user)
+        self.url = f"/api/orders/{self.order.pk}/verify-payment"
+
+    @patch("orders.views.verify_payment_signature", return_value=False)
+    def test_rejects_invalid_payment_signature(self, mock_signature):
+        response = self.client.post(
+            self.url,
+            {
+                "razorpay_order_id": "order_test_123",
+                "razorpay_payment_id": "pay_test_123",
+                "razorpay_signature": "invalid_signature",
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 400)
+
+        self.order.refresh_from_db()
+        self.assertEqual(self.order.status, "PENDING")
+        mock_signature.assert_called_once()
+
+    @patch("orders.views.get_razorpay_client")
+    @patch("orders.views.verify_payment_signature", return_value=True)
+    def test_successful_payment_verification_marks_order_paid(
+        self, mock_signature, mock_get_client
+    ):
+        mock_client = MagicMock()
+        mock_client.payment.fetch.return_value = {
+            "id": "pay_test_123",
+            "order_id": "order_test_123",
+            "status": "captured",
+            "amount": 10000,
+            "currency": "INR",
+        }
+        mock_get_client.return_value = mock_client
+
+        with patch("orders.views.enqueue_task_safely"):
+            response = self.client.post(
+                self.url,
+                {
+                    "razorpay_order_id": "order_test_123",
+                    "razorpay_payment_id": "pay_test_123",
+                    "razorpay_signature": "valid_test_signature",
+                },
+                format="json",
+            )
+
+        self.assertEqual(response.status_code, 200, response.data)
+
+        self.order.refresh_from_db()
+        self.book.refresh_from_db()
+
+        self.assertEqual(self.order.status, "PAID")
+        self.assertEqual(
+            self.order.razorpay_payment_id,
+            "pay_test_123",
+        )
+        self.assertEqual(self.book.stock, 9)
+
+    @patch("orders.views.get_razorpay_client")
+    @patch("orders.views.verify_payment_signature", return_value=True)
+    def test_rejects_payment_that_is_not_captured(
+        self, mock_signature, mock_get_client
+    ):
+        mock_client = MagicMock()
+        mock_client.payment.fetch.return_value = {
+            "id": "pay_test_123",
+            "order_id": "order_test_123",
+            "status": "authorized",
+            "amount": 10000,
+            "currency": "INR",
+        }
+        mock_get_client.return_value = mock_client
+
+        response = self.client.post(
+            self.url,
+            {
+                "razorpay_order_id": "order_test_123",
+                "razorpay_payment_id": "pay_test_123",
+                "razorpay_signature": "valid_test_signature",
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 400)
+
+        self.order.refresh_from_db()
+        self.book.refresh_from_db()
+
+        self.assertEqual(self.order.status, "PENDING")
+        self.assertEqual(self.book.stock, 10)
+class RazorpayWebhookIntegrationTests(TestCase):
+    def setUp(self):
+        User = get_user_model()
+        self.user = User.objects.create_user(
+            username="webhook-test-user",
+            password="testpassword123",
+        )
+
+        self.book = Book.objects.create(
+            title="Webhook Test Book",
+            author="Test Author",
+            price=Decimal("100.00"),
+            stock=10,
+        )
+
+        self.order = Order.objects.create(
+            user=self.user,
+            total_amount=Decimal("100.00"),
+            status="PENDING",
+            razorpay_order_id="order_webhook_123",
+        )
+
+        OrderItem.objects.create(
+            order=self.order,
+            book=self.book,
+            quantity=1,
+            unit_price=Decimal("100.00"),
+        )
+
+        self.order.books.add(self.book)
+        self.url = "/api/orders/webhooks/razorpay"
+
+    @patch("orders.views.verify_webhook_signature", return_value=False)
+    def test_rejects_invalid_webhook_signature(self, mock_signature):
+        payload = {
+            "event": "payment.captured",
+            "payload": {
+                "payment": {
+                    "entity": {
+                        "id": "pay_webhook_123",
+                        "order_id": "order_webhook_123",
+                        "amount": 10000,
+                        "currency": "INR",
+                    }
+                }
+            },
+        }
+
+        response = APIClient().post(
+            self.url,
+            data=__import__("json").dumps(payload),
+            content_type="application/json",
+            HTTP_X_RAZORPAY_SIGNATURE="invalid",
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.order.refresh_from_db()
+        self.assertEqual(self.order.status, "PENDING")
+        mock_signature.assert_called_once()
+
+    @patch("orders.views.verify_webhook_signature", return_value=True)
+    def test_captured_payment_webhook_marks_order_paid(self, mock_signature):
+        payload = {
+            "event": "payment.captured",
+            "payload": {
+                "payment": {
+                    "entity": {
+                        "id": "pay_webhook_123",
+                        "order_id": "order_webhook_123",
+                        "amount": 10000,
+                        "currency": "INR",
+                    }
+                }
+            },
+        }
+
+        with patch("orders.views.enqueue_task_safely"):
+            response = APIClient().post(
+                self.url,
+                data=__import__("json").dumps(payload),
+                content_type="application/json",
+                HTTP_X_RAZORPAY_SIGNATURE="valid_test_signature",
+            )
+
+        self.assertEqual(response.status_code, 200, response.data)
+
+        self.order.refresh_from_db()
+        self.book.refresh_from_db()
+
+        self.assertEqual(self.order.status, "PAID")
+        self.assertEqual(self.order.razorpay_payment_id, "pay_webhook_123")
+        self.assertEqual(self.book.stock, 9)
+
+    @patch("orders.views.verify_webhook_signature", return_value=True)
+    def test_ignores_unrelated_webhook_event(self, mock_signature):
+        payload = {"event": "payment.failed", "payload": {}}
+
+        response = APIClient().post(
+            self.url,
+            data=__import__("json").dumps(payload),
+            content_type="application/json",
+            HTTP_X_RAZORPAY_SIGNATURE="valid_test_signature",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data["received"], True)
+
+        self.order.refresh_from_db()
+        self.book.refresh_from_db()
+
+        self.assertEqual(self.order.status, "PENDING")
+        self.assertEqual(self.book.stock, 10)
