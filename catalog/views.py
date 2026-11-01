@@ -2,6 +2,8 @@ from decimal import Decimal, InvalidOperation
 
 from django.core.paginator import EmptyPage, Paginator
 from django.db.models import Avg, F, Q
+from django.views.decorators.cache import cache_page
+from django.utils.decorators import method_decorator
 from rest_framework import status
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
@@ -36,7 +38,7 @@ def parse_price(raw):
         raise InvalidOperation
     return value
 
-
+@method_decorator(cache_page(300), name="dispatch")
 class BookListView(APIView):
     """
     GET /api/books/ - paginated catalog with search, filter and sort.
@@ -118,6 +120,7 @@ class BookListView(APIView):
             }
         )
 
+@method_decorator(cache_page(300), name="dispatch")
 class BookDetailView(APIView):
     """
     GET /api/books/<id>/ - full details of one book.
