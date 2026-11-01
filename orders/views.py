@@ -24,11 +24,16 @@ from notifications.tasks import (
 from catalog.models import Book
 from . import fulfilment
 from .models import Coupon, Order, OrderItem, ReturnRefundRequest
+from django.http import HttpResponse
+from django.shortcuts import get_object_or_404, render
+from .invoice import generate_invoice_pdf
 from .payment_gateway import (
-    create_payment_order, get_razorpay_client, get_razorpay_key_id,
-    verify_payment_signature, verify_webhook_signature,
+    create_payment_order,
+    get_razorpay_client,
+    get_razorpay_key_id,
+    verify_payment_signature,
+    verify_webhook_signature,
 )
-
 @api_view(["POST"])
 @authentication_classes([BasicAuthentication, SessionAuthentication])
 @permission_classes([IsAuthenticated])
@@ -78,7 +83,12 @@ def checkout(request):
                 return Response({"code": "invalid_coupon", "message": "Coupon discount is not valid."}, status=status.HTTP_400_BAD_REQUEST)
             total = (subtotal * (Decimal("100.00") - applied_coupon.discount_percent) / Decimal("100.00")).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
 
-        order = Order.objects.create(user=request.user, delivery_address=address, total_amount=total, status=fulfilment.PENDING)
+        order = Order.objects.create(
+            user=request.user,
+            delivery_address=address,
+            total_amount=total,
+            status=fulfilment.PENDING,
+        )
         for item in cart_items:
             book = locked_books[item.book_id]
             OrderItem.objects.create(order=order, book=book, quantity=item.quantity, unit_price=book.price)
@@ -310,3 +320,53 @@ def list_return_refund_requests(request):
     ]
 
     return Response(data, status=status.HTTP_200_OK)
+
+def _order_is_paid(order):
+    """Only expose paid orders' confirmation and invoice."""
+    return str(order.status).upper() in {"PAID", "SHIPPED", "DELIVERED"}
+
+
+@api_view(["GET"])
+@authentication_classes([BasicAuthentication, SessionAuthentication])
+@permission_classes([IsAuthenticated])
+def download_invoice(request, order_id):
+    order = get_object_or_404(
+        Order.objects.prefetch_related("items__book"),
+        pk=order_id,
+        user=request.user,
+    )
+    if not _order_is_paid(order):
+        return Response(
+            {"error": "Invoice is available only after successful payment."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    response = HttpResponse(generate_invoice_pdf(order), content_type="application/pdf")
+    response["Content-Disposition"] = f'attachment; filename="invoice-{order.pk}.pdf"'
+    return response
+
+
+@api_view(["GET"])
+@authentication_classes([BasicAuthentication, SessionAuthentication])
+@permission_classes([IsAuthenticated])
+def order_confirmation(request, order_id):
+    order = get_object_or_404(
+        Order.objects.prefetch_related("items__book"),
+        pk=order_id,
+        user=request.user,
+    )
+    if not _order_is_paid(order):
+        return Response(
+            {"error": "Confirmation is available after successful payment."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+    items = list(order.items.select_related("book").all())
+    for item in items:
+        item.line_total = item.unit_price * item.quantity
+    subtotal = sum((item.line_total for item in items), Decimal("0.00"))
+    discount = max(subtotal - order.total_amount, Decimal("0.00"))
+    return render(
+        request,
+        "orders/order_confirmation.html",
+        {"order": order, "items": items, "subtotal": subtotal, "discount": discount},
+    )
