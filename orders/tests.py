@@ -1,4 +1,5 @@
 from decimal import Decimal
+from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
 from django.test import TestCase
@@ -8,6 +9,13 @@ from accounts.models import Address
 from cart.models import Cart, CartItem
 from catalog.models import Book
 from .models import Coupon, Order, OrderItem
+
+from unittest.mock import MagicMock, patch
+from django.test import SimpleTestCase
+from decimal import Decimal
+from types import SimpleNamespace
+
+from orders.payment_gateway import create_payment_order
 
 
 class OrderModelTest(TestCase):
@@ -72,6 +80,9 @@ class CheckoutAPITest(TestCase):
         self.client = APIClient()
         self.client.force_authenticate(user=self.user)
         self.url = "/api/orders/checkout"
+        gateway_patcher = patch("orders.views.create_payment_order", return_value={"id": "order_test_123"})
+        gateway_patcher.start()
+        self.addCleanup(gateway_patcher.stop)
 
     def test_checkout_creates_pending_order_and_returns_payment_url(self):
         response = self.client.post(
@@ -420,14 +431,6 @@ class ReturnRefundRequestAPITest(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(len(response.data), 1)
-
-
-from unittest.mock import MagicMock, patch
-from django.test import SimpleTestCase
-from decimal import Decimal
-from types import SimpleNamespace
-
-from orders.payment_gateway import create_payment_order
 
 
 class RazorpayGatewayTest(SimpleTestCase):
