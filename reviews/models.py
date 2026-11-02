@@ -1,6 +1,9 @@
 from django.conf import settings
 from django.db import models
 from catalog.models import Book
+from django.core.cache import cache
+from django.db.models.signals import post_delete, post_save
+from django.dispatch import receiver
 
 
 class Review(models.Model):
@@ -32,3 +35,7 @@ class Review(models.Model):
 
     def __str__(self):
         return f"{self.book} - {self.rating}/5"
+    
+@receiver([post_save, post_delete], sender=Review)
+def clear_cache_when_a_review_changes(sender, **kwargs):
+    cache.clear()  # cached book pages would otherwise show old ratings
