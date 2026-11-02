@@ -1,6 +1,8 @@
 from django.db import models
 from django.conf import settings
-
+from django.core.cache import cache
+from django.db.models.signals import post_delete, post_save
+from django.dispatch import receiver
 
 class Book(models.Model):
     title = models.CharField(max_length=255)
@@ -26,3 +28,7 @@ class Book(models.Model):
 
     def __str__(self):
         return self.title
+    
+@receiver([post_save, post_delete], sender=Book)
+def clear_cache_when_a_book_changes(sender, **kwargs):
+    cache.clear()  # cached catalog pages would otherwise show old prices and stock
