@@ -164,7 +164,7 @@
     showToast("Address saved.");
   });
 
-  // ---- placing the order ----
+   // ---- placing the order and opening Razorpay ----
   placeButton.addEventListener("click", async () => {
     orderError.textContent = "";
 
@@ -173,24 +173,113 @@
       return;
     }
 
+    if (!window.Razorpay) {
+      orderError.textContent = "Razorpay Checkout did not load. Refresh the page and try again.";
+      return;
+    }
+
     const body = { cartId: cart.id, addressId: selectedAddressId };
     const coupon = couponInput.value.trim();
     if (coupon) body.couponCode = coupon;
 
-    placeButton.disabled = true; // stops a double click from placing two orders
-    const result = await api("/api/orders/checkout", { method: "POST", body: body });
-    placeButton.disabled = false;
+    placeButton.disabled = true;
 
-    if (isAuthError(result.status)) {
-      goToLogin();
-      return;
+    try {
+      const result = await api("/api/orders/checkout", {
+        method: "POST",
+        body: body
+      });
+
+      if (isAuthError(result.status)) {
+        goToLogin();
+        return;
+      }
+
+      if (!result.ok) {
+        orderError.textContent = describeError(result.data);
+        return;
+      }
+
+      const order = result.data;
+
+      if (!order.razorpayKeyId || !order.razorpayOrderId || !order.amount) {
+        orderError.textContent = "The server did not return the required Razorpay order details.";
+        return;
+      }
+
+      const options = {
+        key: order.razorpayKeyId,
+        order_id: order.razorpayOrderId,
+        amount: order.amount,
+        currency: order.currency || "INR",
+        name: "Online Bookstore",
+        description: "Order #" + order.orderId,
+        handler: async function (paymentResult) {
+          orderError.textContent = "Verifying payment…";
+
+          const verification = await api(
+            "/api/orders/" + order.orderId + "/verify-payment",
+            {
+              method: "POST",
+              body: {
+                razorpay_order_id: paymentResult.razorpay_order_id,
+                razorpay_payment_id: paymentResult.razorpay_payment_id,
+                razorpay_signature: paymentResult.razorpay_signature
+              }
+            }
+          );
+
+          if (isAuthError(verification.status)) {
+            goToLogin();
+            return;
+          }
+
+          if (!verification.ok) {
+            orderError.textContent = describeError(verification.data);
+            return;
+          }
+
+          order.status = verification.data.status;
+          showConfirmation(order);
+        },
+        modal: {
+          ondismiss: function () {
+            orderError.textContent = "Payment was not completed. Your order is still pending.";
+          }
+        },
+        theme: {
+          color: "#3399cc"
+        }
+      };
+
+      const razorpay = new window.Razorpay(options);
+      razorpay.on("payment.failed", function () {
+        orderError.textContent = "Payment failed. Please try again.";
+      });
+      razorpay.open();
+    } catch (error) {
+      orderError.textContent = "Could not start payment. Please try again.";
+    } finally {
+      placeButton.disabled = false;
     }
-    if (!result.ok) {
-      orderError.textContent = describeError(result.data);
-      return;
-    }
-    showConfirmation(result.data);
   });
+
+  function showConfirmation(order) {
+    main.hidden = true;
+    document.getElementById("conf-id").textContent = "#" + order.orderId;
+    document.getElementById("conf-status").textContent = order.status;
+    document.getElementById("conf-total").textContent = money(order.totalAmount);
+
+    const couponNote = document.getElementById("conf-coupon");
+    if (order.couponCode) {
+      couponNote.textContent = "Coupon applied: " + order.couponCode;
+      couponNote.hidden = false;
+    }
+
+    confirmation.hidden = false;
+    confirmation.focus();
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
 
   // The API also returns a paymentUrl, but it is a placeholder until the payment
   // gateway story is built, so the page stays here and shows the order instead.

@@ -62,6 +62,17 @@ services:
     command: sh -c "python manage.py migrate && python manage.py seed_books && python manage.py collectstatic --noinput && gunicorn bookstore.wsgi:application --bind 0.0.0.0:8000 --workers 4 --threads 4 --worker-class gthread"
     ports:
       - "8000:8000"
+    environment:
+      DB_ENGINE: django.db.backends.postgresql
+      DB_NAME: online_bookstore
+      DB_USER: bookstore
+      DB_PASSWORD: bookstore
+      DB_HOST: db
+      DB_PORT: "5432"
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/1
+      RAZORPAY_KEY_ID: ${RAZORPAY_KEY_ID:-}
+      RAZORPAY_KEY_SECRET: ${RAZORPAY_KEY_SECRET:-}
 
   worker:
     <<: *app
