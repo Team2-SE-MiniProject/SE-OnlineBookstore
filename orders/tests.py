@@ -1,4 +1,5 @@
 from decimal import Decimal
+import os
 from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
@@ -457,7 +458,11 @@ class RazorpayGatewayTest(SimpleTestCase):
     @patch("orders.payment_gateway.razorpay.Client")
     def test_rejects_missing_credentials(self, client_class):
         with patch("orders.payment_gateway.settings.RAZORPAY_KEY_ID", "", create=True), \
-             patch("orders.payment_gateway.settings.RAZORPAY_KEY_SECRET", "", create=True):
+             patch("orders.payment_gateway.settings.RAZORPAY_KEY_SECRET", "", create=True), \
+             patch.dict(os.environ, {
+                 "RAZORPAY_KEY_ID": "",
+                 "RAZORPAY_KEY_SECRET": "",
+             }):
             with self.assertRaises(RuntimeError):
                 create_payment_order(
                     SimpleNamespace(pk=1, total_amount=Decimal("10.00"))
