@@ -53,6 +53,9 @@ class StorefrontLoginRequired(LoginRequiredMixin):
 class CartPageView(StorefrontLoginRequired, TemplateView):
     template_name = "storefront/cart.html"
 
+@method_decorator(ensure_csrf_cookie, name="dispatch")
+class WishlistPageView(StorefrontLoginRequired, TemplateView):
+    template_name = "storefront/wishlist.html"
 
 @method_decorator(ensure_csrf_cookie, name="dispatch")
 class CheckoutPageView(StorefrontLoginRequired, TemplateView):

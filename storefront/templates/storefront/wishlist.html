@@ -1,0 +1,15 @@
+{% extends "storefront/base.html" %}
+{% load static %}
+
+{% block title %}Your wishlist · Online Bookstore{% endblock %}
+
+{% block content %}
+<h1>Your wishlist</h1>
+
+<p id="wishlist-status" class="status" role="status" aria-live="polite">Loading your wishlist…</p>
+<ul id="wishlist-grid" class="book-grid"></ul>
+{% endblock %}
+
+{% block scripts %}
+<script src="{% static 'storefront/wishlist.js' %}"></script>
+{% endblock %}

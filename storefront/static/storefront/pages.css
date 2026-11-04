@@ -108,3 +108,7 @@ textarea {
   .book-detail { grid-template-columns: 1fr; }
   .detail-cover { max-width: 200px; }
 }
+
+.card-actions { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.4rem; }
+.stock-note { margin: 0; color: var(--muted); font-size: 0.9rem; }
+.detail-info .btn + .btn { margin-left: 0.5rem; }
