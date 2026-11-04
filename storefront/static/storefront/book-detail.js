@@ -12,6 +12,7 @@
   const status = document.getElementById("reviews-status");
   const moreButton = document.getElementById("more-reviews");
   const addButton = document.getElementById("add-to-cart");
+  const wishButton = document.getElementById("wishlist-button");
   const form = document.getElementById("review-form"); // missing when logged out
 
   let page = 1;
@@ -109,6 +110,42 @@
     window.addToCart(Number(bookId), addButton);
   });
 
+  // ---- wishlist ("Save for later") ----
+  let saved = false;
+
+  function showSaved() {
+    wishButton.textContent = saved ? "Saved \u2713 (click to remove)" : "Save for later";
+    wishButton.setAttribute("aria-pressed", String(saved));
+  }
+
+  async function checkSaved() {
+    const result = await api("/api/wishlist/");
+    if (!result.ok) return; // logged out: clicking the button sends them to log in
+    saved = result.data.items.some((item) => String(item.book.id) === String(bookId));
+    showSaved();
+  }
+
+  wishButton.addEventListener("click", async () => {
+    wishButton.disabled = true;
+    const result = saved
+      ? await api("/api/wishlist/" + bookId + "/", { method: "DELETE" })
+      : await api("/api/wishlist/", { method: "POST", body: { bookId: Number(bookId) } });
+    wishButton.disabled = false;
+
+    if (isAuthError(result.status)) {
+      goToLogin();
+      return;
+    }
+    if (!result.ok) {
+      showToast((result.data && result.data.message) || "Could not update your wishlist.");
+      return;
+    }
+
+    saved = !saved;
+    showSaved();
+    showToast(saved ? "Saved to your wishlist." : "Removed from your wishlist.");
+  });
+
   // ---- write a review ----
   if (form) {
     const errorBox = document.getElementById("review-error");
@@ -149,4 +186,5 @@
   }
 
   loadReviews(true);
+  checkSaved();
 })();

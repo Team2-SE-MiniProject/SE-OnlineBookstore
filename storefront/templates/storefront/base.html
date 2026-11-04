@@ -17,6 +17,7 @@
       <nav aria-label="Main">
         <a href="{% url 'storefront:books' %}">Books</a>
         {% if user.is_authenticated %}
+          <a href="{% url 'storefront:wishlist' %}">Wishlist</a>
           <a href="{% url 'storefront:cart' %}">Cart</a>
           <form class="logout-form" method="post" action="{% url 'storefront:logout' %}">
             {% csrf_token %}

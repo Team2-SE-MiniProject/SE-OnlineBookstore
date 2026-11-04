@@ -23,6 +23,7 @@
     <p class="price">₹{{ book.price }}</p>
     <p class="stock">{% if book.stock > 0 %}{{ book.stock }} in stock{% else %}Out of stock{% endif %}</p>
     <button type="button" id="add-to-cart" class="btn"{% if book.stock == 0 %} disabled{% endif %}>Add to cart</button>
+    <button type="button" id="wishlist-button" class="btn btn-secondary" aria-pressed="false">Save for later</button>
 
     {% if book.description %}<p class="description">{{ book.description }}</p>{% endif %}
   </div>

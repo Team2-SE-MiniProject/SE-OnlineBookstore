@@ -12,6 +12,7 @@ urlpatterns = [
     path("register/", views.RegisterPageView.as_view(), name="register"),
     path("logout/", views.logout_view, name="logout"),
     path("cart/", views.CartPageView.as_view(), name="cart"),
+    path("wishlist/", views.WishlistPageView.as_view(), name="wishlist"),
     path("checkout/", views.CheckoutPageView.as_view(), name="checkout"),
     path("api/addresses/", AddressListCreateView.as_view(), name="address-list"),
 ]
