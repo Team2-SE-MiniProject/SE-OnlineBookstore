@@ -6,6 +6,8 @@ How to run the Online Bookstore on your own machine. Pick **Option A (Docker)** 
 
 You need [Docker Desktop](https://www.docker.com/products/docker-desktop/) running. Nothing else has to be installed: the project starts its own PostgreSQL, Redis, web server and Celery worker.
 
+The web service runs gunicorn (4 workers, 4 threads) and serves static files with WhiteNoise, so it behaves like a real deployment.
+
 ```
 docker compose up --build
 ```
@@ -67,9 +69,23 @@ To send **real emails**, set the `EMAIL_*` lines in `.env` (the Gmail example is
 
 ## Running the tests
 
+The tests need the database and Redis (used by the cache and monitoring) to be running. Start them first:
+
 ```
+docker compose up -d db redis
 python manage.py test
 ```
+
+Without Redis every request waits about 2 seconds, so a test run takes very long and fails.
+
+## Payments (Razorpay test mode)
+
+1. Create a free Razorpay account, switch the dashboard to **Test mode**, and generate API keys under Account & Settings, API Keys.
+2. Put these in your `.env` file (never commit them): `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`, and `RAZORPAY_WEBHOOK_SECRET` (any long random text for local use).
+3. For Docker, check that `docker-compose.yml` passes those three names to the `web` service: `grep -n RAZORPAY docker-compose.yml`.
+4. Pay with the test card 4111 1111 1111 1111, any future expiry and any CVV, then choose Success on the mock bank page. No real money moves.
+
+The webhook needs a public URL, so on a laptop the payment is confirmed by the browser's verification step instead.
 
 ## Deployment plan (not deployed)
 
